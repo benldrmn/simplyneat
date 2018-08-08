@@ -1,10 +1,10 @@
 import random
 #TODO: delete\rewrite (not needed now, garbage)
-class Specie:
+class Species:
     def __init__(self, organisms):
-        self._organisms = organisms  # initial organisms in the specie
-        # new structural innovations of this generation of the specie (refer to section 3.2 in the NEAT paper)
-        self._structural_innovations_of_generation = [] #todo: should be global for population, not only specie!
+        self._organisms = organisms  # initial organisms in the species
+        # new structural innovations of this generation of the species (refer to section 3.2 in the NEAT paper)
+        self._structural_innovations_of_generation = [] #todo: should be global for population, not only species!
 
 #TODO: move below to genome.py
     def __mutate(self, phenotype):

@@ -81,6 +81,7 @@ class Genome:
     #TODO: not good! check innovation before creating a new connection!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
     def __mutate_add_connection(self):
         # OUTPUT neurons can't be a source.
+        # TODO: maybe allow output as source.
         possible_sources = [node_index for node_index in self._node_genes.keys() if self._node_genes[node_index].type != 'OUTPUT']
         # INPUT\BIAS neurons can't be a destination.
         possible_destinations = [node_index for node_index in self._node_genes.keys()

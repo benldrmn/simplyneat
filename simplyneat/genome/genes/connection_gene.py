@@ -13,7 +13,7 @@ class ConnectionGene(Gene):
 
     def __str__(self):
         return "Connection source: %d, destination: %d, weight: %d, innovation number: %d, enabled: %s" %\
-                (self._source_node, self._dest_node, self._weight, self._innovation, str(self._enabled))
+                (self._source_node, self._dest_node, self.weight, self._innovation, str(self._enabled))
 
     def to_edge_tuple(self):
         return self._source_node, self._dest_node
