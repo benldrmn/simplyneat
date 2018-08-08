@@ -97,6 +97,7 @@ class Genome:
             self.__add_connection_gene(source, dest, np.random.normal(), True)
 
     def __mutate_delete_connection(self, source, dest):
+        #TODO: don't have source, dest as input but rather choose a connection randomly. Assert instead ifelse in __delete_connection_gene
         return self.__delete_connection_gene(source, dest)
 
     def __mutate_add_node(self):
