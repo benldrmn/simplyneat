@@ -17,6 +17,15 @@ class Genome:
         self._connection_genes = {}  # key: (source_node, dest_node). This type of pair is called an edge.
         self.__init_node_genes(number_of_input_nodes, number_of_output_nodes)
 
+    def get_genes(self):
+        return self._node_genes, self._connection_genes
+
+    def get_max_innovation(self):
+        """returns the largest innovation number in the genome"""
+
+        # Liron: TODO: find out how innovation numbers work- if I create two genomes does the latter one have a higher number?
+
+
     def __init_node_genes(self, number_of_input_nodes, number_of_output_nodes):
         # TODO: Slight code duplication below
         for _ in range(number_of_input_nodes):
