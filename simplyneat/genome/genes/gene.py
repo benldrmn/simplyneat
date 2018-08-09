@@ -4,3 +4,6 @@ class Gene:
     def __init__(self):
         self._innovation = Gene._current_innovation_number
         Gene._current_innovation_number += 1
+
+    def get_innovation(self):
+        return self._innovation
