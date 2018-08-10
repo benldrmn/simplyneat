@@ -1,24 +1,28 @@
-import random
-#TODO: delete\rewrite (not needed now, garbage)
+from random import choice
+
+from simplyneat.organism.organism import Organism
+
+
 class Species:
     def __init__(self, organisms):
-        self._organisms = organisms  # initial organisms in the species
+        self._organisms = list(organisms)  # initial organisms in the species
+        if not self._organisms:
+            raise ValueError("A species must be initialized with at least one organism")
+        self._representative = choice(self._organisms)
         # new structural innovations of this generation of the species (refer to section 3.2 in the NEAT paper)
         self._structural_innovations_of_generation = [] #todo: should be global for population, not only species!
 
-#TODO: move below to genome.py
-    def __mutate(self, phenotype):
-        return 0
+    @property
+    def representative(self):
+        return self._representative
 
-    def __remove_connection(self, connections, nodes):
-        if not connections:
-            return
+    def add_organism(self, organism):
+        if not isinstance(organism, Organism):
+            raise ValueError("add_organism argument should be an instance of %s, not %s", Organism.__class__, organism.__class__)
+        self._organisms.append(organism)
 
-        random_connection_number = random.choice(connections.keys())
-        connection_in_node = connections[random_connection_number].in_node
-        connection_out_node = connections[random_connection_number].out_node
-        connections.pop(random_connection_number)
-        nodes[connection_in_node].number_of_connections -= 1
-        nodes[connection_out_node].number_of_connections -= 1
+
+
+
 
 

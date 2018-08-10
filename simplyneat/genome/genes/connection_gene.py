@@ -8,12 +8,12 @@ class ConnectionGene(Gene):
         self._source_node = source_node
         self._dest_node = destination_node
         #TODO: consider changing weight to _weight and have it as a @property
-        self.weight = weight
+        self._weight = weight
         self._enabled = enabled_flag
 
-    def __str__(self):
-        return "Connection source: %d, destination: %d, weight: %d, innovation number: %d, enabled: %s" %\
-                (self._source_node, self._dest_node, self.weight, self._innovation, str(self._enabled))
+    @property
+    def weight(self):
+        return self._weight
 
     def to_edge_tuple(self):
         return self._source_node, self._dest_node
@@ -38,3 +38,6 @@ class ConnectionGene(Gene):
         logging.debug("Connection gene: %s changed from %s to %s", str(self), prev_state, new_state)
 
 
+    def __str__(self):
+        return "Connection source: %d, destination: %d, weight: %d, innovation number: %d, enabled: %s" %\
+                (self._source_node, self._dest_node, self.weight, self._innovation, str(self._enabled))

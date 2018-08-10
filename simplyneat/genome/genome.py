@@ -8,14 +8,73 @@ import numpy as np
 
 class Genome:
     def __init__(self, number_of_input_nodes, number_of_output_nodes):
-        if number_of_input_nodes < 0:
-            raise ValueError('number of input nodes must be greater or equal to 0')
-        if number_of_output_nodes < 0:
-            raise ValueError('number of output nodes must be greater or equal to 0')
+        if number_of_input_nodes <= 0:
+            raise ValueError('number of input nodes must be greater than 0')
+        if number_of_output_nodes <= 0:
+            raise ValueError('number of output nodes must be greater than 0')
         self._max_used_node_index = 0  # the current maximal index used for a node. Note that this node might have been removed already
         self._node_genes = {}  # key: node_index
         self._connection_genes = {}  # key: (source_node, dest_node). This type of pair is called an edge.
         self.__init_node_genes(number_of_input_nodes, number_of_output_nodes)
+
+    #TODO: the 2 below are possibly redundant
+    # returns a dict of node genes, where the key is the innovation number of the node gene value
+    @property
+    def node_genes(self):
+        return {value.innovation: value for value in self._node_genes.values()}
+
+
+    # returns a dict of connection genes, where the key is the innovation number of the connection gene value
+    @property
+    def connection_genes(self):
+        return {value.innovation: value for value in self._connection_genes.values()}
+
+    @property
+    def genes(self):
+        return {value.innovation: value for value in self._node_genes.values() + self._connection_genes.values()}
+
+
+    @staticmethod
+    def compatibility_distance(genome1, genome2):
+
+        # create a new dict with all of the genomes' genes
+        genome1_genes = genome1.genes()
+        genome2_genes = genome2.genes()
+
+        #TODO: temp values - should be configurablr
+        c1 = 1
+        c2 = 1
+        c3 = 1
+        N = max(len(genome1_genes), len(genome2_genes))
+        #TODO: refactor to functions
+
+        max_innovation_genome1 = max(genome1_genes.keys())
+        max_innovation_genome2 = max(genome2_genes.keys())
+
+        n = min(max_innovation_genome1, max_innovation_genome2)
+        m = max(max_innovation_genome1, max_innovation_genome2)
+
+        excess = 0
+        disjoint = 0
+        for i in range(m+1):
+            if i in set(genome1_genes.keys()).symmetric_difference(set(genome2_genes.keys())):
+                if i <= n:
+                    disjoint += 1
+                else:
+                    excess += 1
+
+        intersecting_connection_innovations = \
+            set(genome1.connection_genes().keys()).intersection(set(genome2.connection_genes().keys()))
+        weight_differences = [abs(genome1_genes[i].weight() - genome2_genes[i].weight()) for i in intersecting_connection_innovations]
+
+        average_weight_difference = np.mean(weight_differences)
+
+        return c1*excess/N + c2*disjoint/N + c3*average_weight_difference
+
+
+
+
+
 
     def __init_node_genes(self, number_of_input_nodes, number_of_output_nodes):
         # TODO: Slight code duplication below
