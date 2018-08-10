@@ -20,9 +20,3 @@ class Species:
         if not isinstance(organism, Organism):
             raise ValueError("add_organism argument should be an instance of %s, not %s", Organism.__class__, organism.__class__)
         self._organisms.append(organism)
-
-
-
-
-
-

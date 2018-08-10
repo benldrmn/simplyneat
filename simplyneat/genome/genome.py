@@ -23,7 +23,6 @@ class Genome:
     def node_genes(self):
         return {value.innovation: value for value in self._node_genes.values()}
 
-
     # returns a dict of connection genes, where the key is the innovation number of the connection gene value
     @property
     def connection_genes(self):
@@ -32,7 +31,6 @@ class Genome:
     @property
     def genes(self):
         return {value.innovation: value for value in self._node_genes.values() + self._connection_genes.values()}
-
 
     @staticmethod
     def compatibility_distance(genome1, genome2):
@@ -71,11 +69,6 @@ class Genome:
 
         return c1*excess/N + c2*disjoint/N + c3*average_weight_difference
 
-
-
-
-
-
     def __init_node_genes(self, number_of_input_nodes, number_of_output_nodes):
         # TODO: Slight code duplication below
         for _ in range(number_of_input_nodes):
@@ -93,7 +86,6 @@ class Genome:
         self._node_genes[new_node_index] = new_node_gene
         logging.info("New node gene added: " + str(new_node_gene))
         return new_node_index
-
 
     def __delete_node_gene(self, node_index):
         assert node_index in self._node_genes
