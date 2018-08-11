@@ -7,29 +7,38 @@ import numpy as np
 
 
 class Genome:
-    def __init__(self, number_of_input_nodes, number_of_output_nodes, connection_genes={}):
-        # TODO: number of input and output nodes should be in config
-        if number_of_input_nodes <= 0:
-            raise ValueError('number of input nodes must be greater than 0')
-        if number_of_output_nodes <= 0:
-            raise ValueError('number of output nodes must be greater than 0')
-        self._node_genes = {}  # key: node_index (as in __encode_node)
-        self._connection_genes = connection_genes  # key: innovation number
-        self.__init_node_genes(number_of_input_nodes, number_of_output_nodes, connection_genes)
+    def __init__(self, config, connection_genes=None):
+        self._number_of_input_nodes = config.number_of_input_nodes
+        self._number_of_output_nodes = config.number_of_output_nodes
+        self._c1, self._c2, self._c3 = config.c1, config.c2, config.c3
 
-    def __init_node_genes(self, number_of_input_nodes, number_of_output_nodes, connection_genes):
+        if self._number_of_input_nodes <= 0:
+            raise ValueError('number of input nodes must be greater than 0')
+        if self._number_of_output_nodes <= 0:
+            raise ValueError('number of output nodes must be greater than 0')
+
+        # key: connection_genes dict key: innovation number
+        if connection_genes is None:
+            self._connection_genes = {}
+        else:
+            self._connection_genes = dict(connection_genes)
+        self._node_genes = {}  # key: node_index (as in __encode_node)
+
+        self.__init_node_genes()
+
+    def __init_node_genes(self):
         """Initializes node for the entire genome, i.e. adds SENSOR, OUTPUT, BIAS nodes which are present in all
         genomes, and adds necessary nodes for a given dictionary of connection_genes"""
         # TODO: number of input and output nodes should be in config
-        for i in range(number_of_input_nodes):
+        for i in range(self._number_of_input_nodes):
             self.__add_node_gene('SENSOR', i)  # SENSOR is an input node
-        for i in range(number_of_output_nodes):
-            self.__add_node_gene('OUTPUT', number_of_input_nodes + i)
+        for i in range(self._number_of_output_nodes):
+            self.__add_node_gene('OUTPUT', self._number_of_input_nodes + i)
         self.__add_node_gene('BIAS', -1)        # node with index -1 is the bias
         logging.info("Added SENSOR, OUTPUT and BIAS node genes")
 
         # if we have connections we need to add their corresponding nodes to the genome
-        for connection_gene in connection_genes.values():
+        for connection_gene in self._connection_genes.values():
             source_index, dest_index = connection_gene.to_edge_tuple()
             if source_index not in self._node_genes.keys():
                 self.__add_node_gene('HIDDEN', source_index)      # add source index
@@ -133,11 +142,6 @@ class Genome:
         # create a new dict with all of the genomes' genes
         connection_genes1 = genome1.connection_genes()
         connection_genes2 = genome2.connection_genes()
-
-        #TODO: temp values - should be configurablr
-        c1 = 1
-        c2 = 1
-        c3 = 1
         N = max(len(connection_genes1), len(connection_genes2))
         #TODO: refactor to functions
 
@@ -149,7 +153,8 @@ class Genome:
 
         average_weight_difference = np.mean(weight_differences)
 
-        return c1*len(excess)/N + c2*len(disjoint)/N + c3*average_weight_difference
+        # TODO: maybe find better solution for c1,c2,c3
+        return genome1.c1*len(excess)/N + genome1.c2*len(disjoint)/N + genome1.c3*average_weight_difference
 
     # TODO: change fitness1 and fitness2, we already have an adjusted fitness matrix maybe get it from there instead of computing once again
     # TODO: maybe adjusted fitness instead of fitness?
@@ -234,8 +239,5 @@ class Genome:
         connection_gene.weight += random.normalvariate(0, 1)         # TODO: assignment to weight should work with property.setter
         # TODO: standard normal distribution was arbitrary, better have config file
 
-
     def __str__(self):
         return 'A genome. Node genes: %s, Connection genes: %s' % (self._node_genes, self._connection_genes)
-
-

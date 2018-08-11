@@ -7,7 +7,7 @@ class Species:
         self._organisms = list(organisms)  # initial organisms in the species
         if not self._organisms:
             raise ValueError("A species must be initialized with at least one organism")
-        self._representative = random.choice(self._organisms)
+        self._representative = random.choice(self._organisms)         # TODO: maybe 1-center?
         # new structural innovations of this generation of the species (refer to section 3.2 in the NEAT paper)
         self._structural_innovations_of_generation = [] #todo: should be global for population, not only species!
 
@@ -17,7 +17,7 @@ class Species:
 
     @property
     def representative(self):
-        return self._representative         # TODO: maybe 1-center?
+        return self._representative
 
     def add_organism(self, organism):
         if not isinstance(organism, Organism):
