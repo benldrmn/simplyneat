@@ -1,24 +1,9 @@
-from simplyneat.genome.genes import NodeGene
+from simplyneat.genome.genome import Genome
 
-# # print(type)
-# # print(type.keys())
-# # print(type.HIDDEN)
-# a = Neuron(3)
-# # # print(theano.shared(np.array([1,2,3], dtype=np.float32), borrow=True))
-# # t = a.forward([0,0,0], [4,1,6], 1)
-# # print(t)
-# # print("POK")
-# # print(a.serial_number)
-# # print(Neuron(3).serial_number)
-# print(a.type())
-# b = BiasNeuron(4)
-# print(b.type())
-# print(a.forward([1,2],[0.04,0],0.04))
-# print(Neuron.SIGMOID_STEEPNESS)
+genome = Genome(1, 1)
+connection_genes = genome.connection_genes
+print(connection_genes)
 
-g = NodeGene()
-print(g.innovation)
-g2 = NodeGene()
-print(g2.innovation)
-print(g.innovation)
-print(g.current_innovation_number)
+genome.add_connection_gene(0, 4, 1)
+connection_genes = genome.connection_genes
+print(connection_genes)

@@ -1,12 +1,9 @@
-from simplyneat.genome.genes.gene import Gene
 
-
-class NodeGene(Gene):
+class NodeGene():
     def __init__(self, node_type, node_index):
-        super().__init__()
         # SENSOR, OUTPUT, HIDDEN or BIAS
         self.type = node_type  # todo: consider enum or something, don't leave as a string. strings suck
-        # not the innovation number, but rather a number of internal book-keeping, as in the NEAT paper's illustrations
+        # a number of internal book-keeping, as in the NEAT paper's illustrations
         self._node_index = node_index
 
         #TODO: we don't mind if the to/from connections are disabled - maybe reconsider? (that's probably fine)
@@ -15,11 +12,15 @@ class NodeGene(Gene):
         # nodes that this node connects to as source
         self._has_connections_to = set()
 
+    @property
+    def node_index(self):
+        return self._node_index
+
     def __str__(self):
-        return "Node type: %s, index: %d, innovation number: %d," \
+        return "Node type: %s, index: %d," \
                " has connections from: %s," \
                " has connections to: %s" %\
-               (self.type, self._node_index, self._innovation, str(self._has_connections_from), str(self._has_connections_to))
+               (self.type, self._node_index, str(self._has_connections_from), str(self._has_connections_to))
 
     def add_connection_to(self, destination_node):
         if destination_node in self._has_connections_to:

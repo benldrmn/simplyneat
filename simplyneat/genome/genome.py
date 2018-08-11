@@ -18,10 +18,10 @@ class Genome:
         self.__init_node_genes(number_of_input_nodes, number_of_output_nodes)
 
     #TODO: the 2 below are possibly redundant
-    # returns a dict of node genes, where the key is the innovation number of the node gene value
+    # returns a dictionary of node-genes, the keys are indexes and values are node-genes
     @property
     def node_genes(self):
-        return {value.innovation: value for value in self._node_genes.values()}
+        return self._node_genes
 
     # returns a dict of connection genes, where the key is the innovation number of the connection gene value
     @property
@@ -29,15 +29,15 @@ class Genome:
         return {value.innovation: value for value in self._connection_genes.values()}
 
     @property
-    def genes(self):
-        """Returns a dictionary, keys are innovation numbers and values are corresponding genes"""
-        return {value.innovation: value for value in self._node_genes.values() + self._connection_genes.values()}
+    def size(self):
+        """Returns the length of the entire genome, connection genes and node genes combined"""
+        return len(self._connection_genes) + len(self._node_genes)
 
     @staticmethod
-    def __calculate_mismatching_genes(genome1_genes, genome2_genes):
+    def __calculate_mismatching_genes(connection_genes1, connection_genes2):
         """Returns a pair of lists containing innovation numbers of disjoint and excess genes"""
-        max_innovation_genome1 = max(genome1_genes.keys())      # max innovation is of connection genes
-        max_innovation_genome2 = max(genome2_genes.keys())
+        max_innovation_genome1 = max(connection_genes1.keys())      # max innovation is of connection genes
+        max_innovation_genome2 = max(connection_genes2.keys())
 
         n = min(max_innovation_genome1, max_innovation_genome2)
         m = max(max_innovation_genome1, max_innovation_genome2)
@@ -45,7 +45,7 @@ class Genome:
         excess = []
         disjoint = []
         for i in range(m + 1):
-            if i in set(genome1_genes.keys()).symmetric_difference(set(genome2_genes.keys())):
+            if i in set(connection_genes1.keys()).symmetric_difference(set(connection_genes2.keys())):
                 if i <= n:
                     disjoint.append(i)
                 else:
@@ -56,53 +56,73 @@ class Genome:
     def compatibility_distance(genome1, genome2):
         """Returns the compatibility distance, a measure of how closely related two genomes are"""
         # create a new dict with all of the genomes' genes
-        genome1_genes = genome1.genes()
-        genome2_genes = genome2.genes()
+        connection_genes1 = genome1.connection_genes()
+        connection_genes2 = genome2.connection_genes()
 
         #TODO: temp values - should be configurablr
         c1 = 1
         c2 = 1
         c3 = 1
-        N = max(len(genome1_genes), len(genome2_genes))
+        N = max(len(connection_genes1), len(connection_genes2))
         #TODO: refactor to functions
 
-        disjoint, excess = Genome.__calculate_mismatching_genes(genome1_genes, genome2_genes)
+        disjoint, excess = Genome.__calculate_mismatching_genes(connection_genes1, connection_genes2)
 
         intersecting_connection_innovations = \
             set(genome1.connection_genes().keys()).intersection(set(genome2.connection_genes().keys()))
-        weight_differences = [abs(genome1_genes[i].weight() - genome2_genes[i].weight()) for i in intersecting_connection_innovations]
+        weight_differences = [abs(connection_genes1[i].weight() - connection_genes2[i].weight()) for i in intersecting_connection_innovations]
 
         average_weight_difference = np.mean(weight_differences)
 
         return c1*len(excess)/N + c2*len(disjoint)/N + c3*average_weight_difference
 
+    # TODO: change fitness1 and fitness2, we already have an adjusted fitness matrix maybe get it from there instead of computing once again
+    # TODO: maybe adjusted fitness instead of fitness?
     @staticmethod
-    def crossover(genome1, genome2):
+    def crossover(genome1, genome2, fitness1, fitness2):
         """Returns a genome containing the crossover of both genomes"""
         # Matching genes are inherited randomly, excess and disjoint genes are inherited from the better parent
         # if parents have same fitness, the better parent is the one with the smaller genome
-        genome1_genes = genome1.genes()
-        genome2_genes = genome2.genes()
-        disjoint, excess = Genome.__calculate_mismatching_genes(genome1_genes, genome2_genes)
-        matching = set(genome1_genes.keys()).intersection(set(genome2_genes.keys()))
+        if fitness2 > fitness1 or (fitness1 == fitness2 and genome2.size() < genome1.size()):
+            genome1, genome2 = genome2, genome1
+            fitness1, fitness2 = fitness2, fitness1
+            # Makes sure that genome1 is the genome of the fitter parent
+
+        connection_genes1 = genome1.connection_genes()
+        connection_genes2 = genome2.connection_genes()
+        disjoint, excess = Genome.__calculate_mismatching_genes(connection_genes1, connection_genes2)
+        mismatching = disjoint + excess
+        matching = set(connection_genes1.keys()).intersection(set(connection_genes2.keys()))
+        result = {}
+
+        # matching genes
+        for innovation_number in matching:
+            if random.choice([True, False]):
+                result[innovation_number] = connection_genes1[innovation_number]
+            else:
+                result[innovation_number] = connection_genes2[innovation_number]
+
+        # mismatched genes
+        for innovation_number in mismatching:
+            if innovation_number in connection_genes1.keys():
+                result[innovation_number] = connection_genes1[innovation_number]
+
+        return result
 
     def __init_node_genes(self, number_of_input_nodes, number_of_output_nodes):
         # TODO: Slight code duplication below
-        for _ in range(number_of_input_nodes):
-            self.__add_node_gene('SENSOR')  # SENSOR is an input node
-        for _ in range(number_of_output_nodes):
-            self.__add_node_gene('OUTPUT')
+        for i in range(number_of_input_nodes):
+            self.__add_node_gene('SENSOR', i)  # SENSOR is an input node
+        for i in range(number_of_output_nodes):
+            self.__add_node_gene('OUTPUT', number_of_input_nodes + i)
+        self.__add_node_gene('BIAS', -1)        # node with index -1 is the bias
 
-        self.__add_node_gene('BIAS')
-
-    def __add_node_gene(self, node_type):
+    def __add_node_gene(self, node_type, node_index):
         # assign the next available node index after current max - once a node is removed (if became isolated), it's index isn't re-assigned
-        self._max_used_node_index += 1
-        new_node_index = self._max_used_node_index
-        new_node_gene = NodeGene(node_type, new_node_index)
-        self._node_genes[new_node_index] = new_node_gene
+        new_node_gene = NodeGene(node_type, node_index)
+        self._node_genes[node_index] = new_node_gene
         logging.info("New node gene added: " + str(new_node_gene))
-        return new_node_index
+        return node_index
 
     def __delete_node_gene(self, node_index):
         assert node_index in self._node_genes
@@ -176,13 +196,18 @@ class Genome:
             old_connection = random.choice(list(self._connection_genes.values()))
             old_source, old_dest = old_connection.to_edge_tuple()
             #TODO: CHECK IF THIS INNOVATION ALREADY EXISTS IN POPULATION!!! (LIKE IN ADD CONNECTION)
-            new_node_index = self.__add_node_gene('HIDDEN')
+            new_node_index = self.__add_node_gene('HIDDEN', Genome.__encode_node(old_source, old_dest))     # Split the connection
             # the new connection leading into the new node from the old source has weight 1 according to the NEAT paper
             self.__add_connection_gene(old_source, new_node_index, 1, True)
             # the new connection leading out of the new node from to the old dest has
             # the old connection's weight according to the NEAT paper
             self.__add_connection_gene(new_node_index, old_dest, old_connection.weight, True)
             old_connection.disable()
+
+    @staticmethod
+    def __encode_node(prev_source, prev_dest):
+        """Returns new node index based on the edge the node is splitting"""
+        return prev_source.node_index, prev_dest.node_index
 
     def __mutate_connection_weight(self):
         connection_gene = random.choice(self._connection_genes)
