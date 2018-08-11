@@ -43,7 +43,7 @@ class Population:
         species_adjusted_fitness = [sum(species_fitness_vector) for species_fitness_vector in self.adjusted_fitness_matrix]
         total_fitness = sum(species_adjusted_fitness)
         return self._size * species_adjusted_fitness / total_fitness             # offspring number proportionate to relative fitness
-        # TODO: the sum of the value returned above can be not equal to self._size due to rounding, fix this latertm
+        # TODO: the sum of the value returned above can be not equal to self._size due to rounding, fix this later
 
     def __calculate_adjusted_fitness_matrix(self):
         """Returns a list of lists, entry [i,j] contains the regular adjusted of organism j in species i"""

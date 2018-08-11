@@ -4,7 +4,7 @@ from itertools import product
 import logging
 import random
 import numpy as np
-
+import copy
 
 class Genome:
     def __init__(self, number_of_input_nodes, number_of_output_nodes, connection_genes={}):
@@ -13,8 +13,10 @@ class Genome:
             raise ValueError('number of input nodes must be greater than 0')
         if number_of_output_nodes <= 0:
             raise ValueError('number of output nodes must be greater than 0')
-        self._node_genes = {}  # key: node_index (as in __encode_node)
-        self._connection_genes = connection_genes  # key: innovation number
+        self.number_of_input_nodes = number_of_input_nodes
+        self.number_of_output_nodes = number_of_output_nodes
+        self._node_genes = {}                       # key: node_index (as in __encode_node)
+        self._connection_genes = connection_genes   # key: innovation number
         self.__init_node_genes(number_of_input_nodes, number_of_output_nodes, connection_genes)
 
     def __init_node_genes(self, number_of_input_nodes, number_of_output_nodes, connection_genes):
@@ -69,7 +71,6 @@ class Genome:
         self._connection_genes[new_connection_gene.innovation] = new_connection_gene
         self._node_genes[source].add_connection_to(dest)
         self._node_genes[dest].add_connection_from(source)
-        # TODO: implement str(connection) and log it instead
         logging.info("New connection gene added: " + str(new_connection_gene))
 
     def __delete_connection_gene(self, innovation_number):
@@ -163,27 +164,27 @@ class Genome:
             fitness1, fitness2 = fitness2, fitness1
             # Makes sure that genome1 is the genome of the fitter parent
 
-        connection_genes1 = genome1.connection_genes()
-        connection_genes2 = genome2.connection_genes()
+        connection_genes1 = genome1.connection_genes
+        connection_genes2 = genome2.connection_genes
         disjoint, excess = Genome.__calculate_mismatching_genes(connection_genes1, connection_genes2)
         mismatching = disjoint + excess
         matching = set(connection_genes1.keys()).intersection(set(connection_genes2.keys()))
-        result = {}
+        result_connection_genes = {}
 
         # matching genes
         for innovation_number in matching:
             if random.choice([True, False]):
-                result[innovation_number] = connection_genes1[innovation_number]
+                result_connection_genes[innovation_number] = copy.copy(connection_genes1[innovation_number])     # copied because mutations can change values
             else:
-                result[innovation_number] = connection_genes2[innovation_number]
+                result_connection_genes[innovation_number] = copy.copy(connection_genes2[innovation_number])
 
         # mismatched genes
         for innovation_number in mismatching:
             if innovation_number in connection_genes1.keys():
-                result[innovation_number] = connection_genes1[innovation_number]
+                result_connection_genes[innovation_number] = copy.copy(connection_genes1[innovation_number])
 
         # TODO: return new genome instead of dictionary. connection-genes should be a mapping from edges to connections.
-        return result
+        return Genome(genome1.number_of_input_nodes, genome1.number_of_output_nodes, result_connection_genes)
 
     #TODO: not good! check innovation before creating a new connection!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
     def __mutate_add_connection(self):
@@ -227,15 +228,15 @@ class Genome:
     @staticmethod
     def __encode_node(prev_source, prev_dest):
         """Returns new node index based on the edge the node is splitting"""
-        return prev_source.node_index, prev_dest.node_index
+        return prev_source, prev_dest           # Liron : TODO: I removed node_index because I think inputs are already indexes
 
     def __mutate_connection_weight(self):
         connection_gene = random.choice(self._connection_genes.values())
         connection_gene.weight += random.normalvariate(0, 1)         # TODO: assignment to weight should work with property.setter
         # TODO: standard normal distribution was arbitrary, better have config file
 
-
     def __str__(self):
         return 'A genome. Node genes: %s, Connection genes: %s' % (self._node_genes, self._connection_genes)
 
+    __repr__ = __str__          # TODO: ruins the pourpse of repr, but is useful for testing. after done testing should remove this line
 

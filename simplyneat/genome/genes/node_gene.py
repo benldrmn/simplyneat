@@ -16,12 +16,6 @@ class NodeGene():
     def node_index(self):
         return self._node_index
 
-    def __str__(self):
-        return "Node type: %s, index: %d," \
-               " has connections from: %s," \
-               " has connections to: %s" %\
-               (self.type, self._node_index, str(self._has_connections_from), str(self._has_connections_to))
-
     def add_connection_to(self, destination_node):
         if destination_node in self._has_connections_to:
             raise ValueError("An edge already exists between %s and node number %d", str(self), destination_node)
@@ -46,4 +40,14 @@ class NodeGene():
         if not self._has_connections_from and not self._has_connections_to:
             return True
         return False
+
+    def __str__(self):
+        return "(Node type: %s, index: %s)" % (self.type, self._node_index)
+        # return "Node type: %s, index: %d," \
+        #        " has connections from: %s," \
+        #        " has connections to: %s" %\
+        #        (self.type, self._node_index, str(self._has_connections_from), str(self._has_connections_to))
+
+    __repr__ = __str__          # TODO: ruins the pourpse of repr, but is useful for testing. after done testing should remove this line
+
 

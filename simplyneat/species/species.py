@@ -18,7 +18,7 @@ class Species:
 
     @property
     def representative(self):
-        return self._representative         # TODO: maybe 1-center?
+        return self._representative         # maybe 1-center?
 
     def add_organism(self, organism):
         if not isinstance(organism, Organism):
