@@ -13,8 +13,12 @@ class Species:
         self._structural_innovations_of_generation = [] #todo: should be global for population, not only species!
 
     @property
+    def organisms(self):
+        return self._organisms
+
+    @property
     def representative(self):
-        return self._representative
+        return self._representative         # TODO: maybe 1-center?
 
     def add_organism(self, organism):
         if not isinstance(organism, Organism):
