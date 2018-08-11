@@ -1,8 +1,8 @@
 from simplyneat.genome.genes.connection_gene import ConnectionGene
 from simplyneat.genome.genes.node_gene import NodeGene
-from itertools import product
+import itertools
 import logging
-from random import choice
+import random
 import numpy as np
 
 
@@ -72,10 +72,6 @@ class Genome:
         return c1*excess/N + c2*disjoint/N + c3*average_weight_difference
 
 
-
-
-
-
     def __init_node_genes(self, number_of_input_nodes, number_of_output_nodes):
         # TODO: Slight code duplication below
         for _ in range(number_of_input_nodes):
@@ -86,7 +82,8 @@ class Genome:
         self.__add_node_gene('BIAS')
 
     def __add_node_gene(self, node_type):
-        # assign the next available node index after current max - once a node is removed (if became isolated), it's index isn't re-assigned
+        # assign the next available node index after current max.
+        # once a node is removed (if became isolated), it's index isn't re-assigned.
         self._max_used_node_index += 1
         new_node_index = self._max_used_node_index
         new_node_gene = NodeGene(node_type, new_node_index)
@@ -141,17 +138,18 @@ class Genome:
     def __mutate_add_connection(self):
         # OUTPUT neurons can't be a source.
         # TODO: maybe allow output as source.
-        possible_sources = [node_index for node_index in self._node_genes.keys() if self._node_genes[node_index].type != 'OUTPUT']
+        possible_sources = [node_index for node_index in self._node_genes.keys()
+                            if self._node_genes[node_index].type != 'OUTPUT']
         # INPUT\BIAS neurons can't be a destination.
         possible_destinations = [node_index for node_index in self._node_genes.keys()
                                  if self._node_genes[node_index].type not in ['BIAS', 'INPUT']]
         # Two edges with the same source and destination are not possible.
-        possible_edges = set(product(possible_sources, possible_destinations)) - set(self._connection_genes.keys())
+        possible_edges = set(itertools.product(possible_sources, possible_destinations)) - set(self._connection_genes.keys())
         if not possible_edges:
             logging.debug("No possible edges. Possible sources: %s, possible destinations: %s, current edges: %s",
                           str(possible_sources), str(possible_destinations), str(self._connection_genes.keys()))
         else:
-            source, dest = choice(possible_edges)  # randomly choose one edge from the possible edges
+            source, dest = random.choice(possible_edges)  # randomly choose one edge from the possible edges
             # TODO: normal is just a place-holder distribution. have it configurable
             # TODO: I assume that the new connection gene is always enabled after the mutation
             self.__add_connection_gene(source, dest, np.random.normal(), True)
@@ -164,7 +162,7 @@ class Genome:
         if not self._connection_genes:
             logging.debug("add_note mutation failed: no connection genes to split")
         else:
-            old_connection = choice(list(self._connection_genes.values()))
+            old_connection = random.choice(list(self._connection_genes.values()))
             old_source, old_dest = old_connection.to_edge_tuple()
             #TODO: CHECK IF THIS INNOVATION ALREADY EXISTS IN POPULATION!!! (LIKE IN ADD CONNECTION)
             new_node_index = self.__add_node_gene('HIDDEN')
@@ -176,7 +174,7 @@ class Genome:
             old_connection.disable()
 
     def __mutate_connection_weight(self):
-        raise NotImplemented()
+        raise NotImplementedError
         #TODO: easy to implement, just decide on a distribution choice policy (best to have it configurable)
         #TODO: also mustate disabled connections, right?
 

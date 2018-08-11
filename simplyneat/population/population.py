@@ -1,9 +1,7 @@
-import random
-
+from simplyneat.species.species import Species
 from simplyneat.genome.genome import Genome
 import logging
-
-from simplyneat.species.species import Species
+import random
 
 
 class Population:
