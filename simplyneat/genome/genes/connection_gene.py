@@ -5,9 +5,9 @@ class ConnectionGene():
     # TODO: not thread safe
     _current_innovation_number = 0
 
-    def __init__(self, source_node, destination_node, weight, enabled_flag):
-        self._source_node = source_node
-        self._dest_node = destination_node
+    def __init__(self, source_node, destination_node, weight, enabled_flag=True):
+        self._source_node = source_node             # the index of the source node
+        self._dest_node = destination_node          # the index of the dest node
         self._weight = weight
         self._enabled = enabled_flag
         self._innovation = ConnectionGene._current_innovation_number

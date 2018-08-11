@@ -1,9 +1,7 @@
-from simplyneat.genome.genome import Genome
+from simplyneat.genome.genome import *
 
-genome = Genome(1, 1)
-connection_genes = genome.connection_genes
-print(connection_genes)
+connections1 = [ConnectionGene(0, 0, 0), ConnectionGene(0, 1, 1), ConnectionGene(4, 1, 5)]
+connection1 = ConnectionGene(0, 0)
 
-genome.add_connection_gene(0, 4, 1)
-connection_genes = genome.connection_genes
-print(connection_genes)
+genome1 = Genome(10, 2)
+genome2 = Genome(10, 2)
