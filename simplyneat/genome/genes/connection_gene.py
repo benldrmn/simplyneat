@@ -15,6 +15,10 @@ class ConnectionGene(Gene):
     def weight(self):
         return self._weight
 
+    @weight.setter
+    def weight(self, weight):
+        self._weight = weight
+
     def to_edge_tuple(self):
         return self._source_node, self._dest_node
 

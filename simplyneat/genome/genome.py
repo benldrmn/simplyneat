@@ -2,7 +2,7 @@ from simplyneat.genome.genes.connection_gene import ConnectionGene
 from simplyneat.genome.genes.node_gene import NodeGene
 from itertools import product
 import logging
-from random import choice
+import random
 import numpy as np
 
 
@@ -30,11 +30,31 @@ class Genome:
 
     @property
     def genes(self):
+        """Returns a dictionary, keys are innovation numbers and values are corresponding genes"""
         return {value.innovation: value for value in self._node_genes.values() + self._connection_genes.values()}
 
     @staticmethod
-    def compatibility_distance(genome1, genome2):
+    def __calculate_mismatching_genes(genome1_genes, genome2_genes):
+        """Returns a pair of lists containing innovation numbers of disjoint and excess genes"""
+        max_innovation_genome1 = max(genome1_genes.keys())      # max innovation is of connection genes
+        max_innovation_genome2 = max(genome2_genes.keys())
 
+        n = min(max_innovation_genome1, max_innovation_genome2)
+        m = max(max_innovation_genome1, max_innovation_genome2)
+
+        excess = []
+        disjoint = []
+        for i in range(m + 1):
+            if i in set(genome1_genes.keys()).symmetric_difference(set(genome2_genes.keys())):
+                if i <= n:
+                    disjoint.append(i)
+                else:
+                    excess.append(i)
+        return disjoint, excess
+
+    @staticmethod
+    def compatibility_distance(genome1, genome2):
+        """Returns the compatibility distance, a measure of how closely related two genomes are"""
         # create a new dict with all of the genomes' genes
         genome1_genes = genome1.genes()
         genome2_genes = genome2.genes()
@@ -46,20 +66,7 @@ class Genome:
         N = max(len(genome1_genes), len(genome2_genes))
         #TODO: refactor to functions
 
-        max_innovation_genome1 = max(genome1_genes.keys())
-        max_innovation_genome2 = max(genome2_genes.keys())
-
-        n = min(max_innovation_genome1, max_innovation_genome2)
-        m = max(max_innovation_genome1, max_innovation_genome2)
-
-        excess = 0
-        disjoint = 0
-        for i in range(m+1):
-            if i in set(genome1_genes.keys()).symmetric_difference(set(genome2_genes.keys())):
-                if i <= n:
-                    disjoint += 1
-                else:
-                    excess += 1
+        disjoint, excess = Genome.__calculate_mismatching_genes(genome1_genes, genome2_genes)
 
         intersecting_connection_innovations = \
             set(genome1.connection_genes().keys()).intersection(set(genome2.connection_genes().keys()))
@@ -67,7 +74,17 @@ class Genome:
 
         average_weight_difference = np.mean(weight_differences)
 
-        return c1*excess/N + c2*disjoint/N + c3*average_weight_difference
+        return c1*len(excess)/N + c2*len(disjoint)/N + c3*average_weight_difference
+
+    @staticmethod
+    def crossover(genome1, genome2):
+        """Returns a genome containing the crossover of both genomes"""
+        # Matching genes are inherited randomly, excess and disjoint genes are inherited from the better parent
+        # if parents have same fitness, the better parent is the one with the smaller genome
+        genome1_genes = genome1.genes()
+        genome2_genes = genome2.genes()
+        disjoint, excess = Genome.__calculate_mismatching_genes(genome1_genes, genome2_genes)
+        matching = set(genome1_genes.keys()).intersection(set(genome2_genes.keys()))
 
     def __init_node_genes(self, number_of_input_nodes, number_of_output_nodes):
         # TODO: Slight code duplication below
@@ -143,7 +160,7 @@ class Genome:
             logging.debug("No possible edges. Possible sources: %s, possible destinations: %s, current edges: %s",
                           str(possible_sources), str(possible_destinations), str(self._connection_genes.keys()))
         else:
-            source, dest = choice(possible_edges)  # randomly choose one edge from the possible edges
+            source, dest = random.choice(possible_edges)  # randomly choose one edge from the possible edges
             # TODO: normal is just a place-holder distribution. have it configurable
             # TODO: I assume that the new connection gene is always enabled after the mutation
             self.__add_connection_gene(source, dest, np.random.normal(), True)
@@ -156,7 +173,7 @@ class Genome:
         if not self._connection_genes:
             logging.debug("add_note mutation failed: no connection genes to split")
         else:
-            old_connection = choice(list(self._connection_genes.values()))
+            old_connection = random.choice(list(self._connection_genes.values()))
             old_source, old_dest = old_connection.to_edge_tuple()
             #TODO: CHECK IF THIS INNOVATION ALREADY EXISTS IN POPULATION!!! (LIKE IN ADD CONNECTION)
             new_node_index = self.__add_node_gene('HIDDEN')
@@ -168,10 +185,9 @@ class Genome:
             old_connection.disable()
 
     def __mutate_connection_weight(self):
-        raise NotImplemented()
-        #TODO: easy to implement, just decide on a distribution choice policy (best to have it configurable)
-        #TODO: also mustate disabled connections, right?
-
+        connection_gene = random.choice(self._connection_genes)
+        connection_gene.weight += random.normalvariate(0, 1)         # TODO: assignment to weight should work with property.setter
+        # TODO: standard normal distribution was arbitrary, better have config file
 
 
 
