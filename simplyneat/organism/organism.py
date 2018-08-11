@@ -1,10 +1,9 @@
 from simplyneat.genome.genome import Genome
 
-class Organism:
-    def __init__(self, number_of_input_nodes, number_of_output_nodes):
-        self._genome = Genome(number_of_input_nodes, number_of_output_nodes)
 
-    # self._organism_index = organism_index
+class Organism:
+    def __init__(self, config):
+        self._genome = Genome(config)
 
     @property
     def genome(self):

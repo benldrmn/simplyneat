@@ -6,12 +6,12 @@ from simplyneat.species.species import Species
 
 
 class Population:
-    def __init__(self, fitness_function, distance_threshold, size):
+    def __init__(self, config):
         self._list_of_species = []                          # a list of species
         self._organisms = []                                # a list of organisms
-        self._fitness_function = fitness_function           # TODO: maybe receive fitness function in config?
-        self._distance_threshold = distance_threshold       # TODO: receive distance_threshold in config
-        self._size = size                                   # population size TODO: config
+        self._fitness_function = config.fitness_function
+        self._distance_threshold = config.distance_threshold       # threshold for being in the same species
+        self._size = config.population_size                        # population size
         self.adjusted_fitness_matrix = self.__calculate_adjusted_fitness_matrix()
 
     def __add_organism(self, organism):
@@ -60,8 +60,9 @@ class Population:
         assert organism in self._organisms
         fitness = self._fitness_function(organism)
         # at least 1 since the sharing of an organism with itself is 1
-        sum_of_sharing = sum([Population.__sharing_function(Genome.compatibility_distance(organism.genome(), other_organism.genome()))
-                             for other_organism in self._organisms])
+        sum_of_sharing = sum([Population.__sharing_function(Genome.compatibility_distance(organism.genome(),
+                                                            other_organism.genome()), self._distance_threshold)
+                                                            for other_organism in self._organisms])
         return fitness/sum_of_sharing
 
     @staticmethod
