@@ -1,8 +1,8 @@
 import logging
 
 
-class ConnectionGene():
-    # TODO: not thread safe
+class ConnectionGene:
+
     _current_innovation_number = 0
 
     def __init__(self, source_node, destination_node, weight, enabled_flag=True):
@@ -55,5 +55,5 @@ class ConnectionGene():
         # return "Connection source: %s, destination: %s, weight: %d, innovation number: %d, enabled: %s" %\
         #         (self._source_node, self._dest_node, self.weight, self._innovation, str(self._enabled))
 
-    __repr__ = __str__          # TODO: ruins the pourpse of repr, but is useful for testing. after done testing should remove this line
+    __repr__ = __str__
 

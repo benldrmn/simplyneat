@@ -1,12 +1,14 @@
+import logging
 
-class NodeGene():
+
+class NodeGene:
+
     def __init__(self, node_type, node_index):
         # SENSOR, OUTPUT, HIDDEN or BIAS
         self.type = node_type  # todo: consider enum or something, don't leave as a string. strings suck
         # a number of internal book-keeping, as in the NEAT paper's illustrations
         self._node_index = node_index
 
-        #TODO: we don't mind if the to/from connections are disabled - maybe reconsider? (that's probably fine)
         # nodes that connect to this node as destination
         self._has_connections_from = set()
         # nodes that this node connects to as source
@@ -48,6 +50,6 @@ class NodeGene():
         #        " has connections to: %s" %\
         #        (self.type, self._node_index, str(self._has_connections_from), str(self._has_connections_to))
 
-    __repr__ = __str__          # TODO: ruins the pourpse of repr, but is useful for testing. after done testing should remove this line
+    __repr__ = __str__
 
 
