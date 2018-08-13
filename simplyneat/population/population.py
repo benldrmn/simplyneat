@@ -8,6 +8,8 @@ import numpy as np
 
 class Population:
 
+    _current_generation_number = 0      # TODO: static variable
+
     def __init__(self, config, organisms=None, list_of_species=None):
         if list_of_species is None:
             self._list_of_species = []                              # a list of species
@@ -24,9 +26,13 @@ class Population:
         self._add_node_probability = config.add_node_probability
         self._add_connection_probability = config.add_connection_probability
         self._config = config
+        # generation number
+        Population._current_generation_number += 1
+        self._generation_number = Population._current_generation_number
         # divide the organisms into species
         for organism in self._organisms:
             self.speciate(organism)
+        self.fitness_matrix = self.__calculate_fitness_matrix()
         self.adjusted_fitness_matrix = self.__calculate_adjusted_fitness_matrix()
 
     def __add_organism(self, organism):
@@ -97,24 +103,33 @@ class Population:
         # or just hope this never happens (which it probably will)
         return new_species_distribution
 
-    def __calculate_adjusted_fitness_matrix(self):
-        """Returns a list of lists, entry [i,j] contains the regular adjusted of organism j in species i"""
+    def __calculate_fitness_matrix(self):
+        """Returns a list of lists, entry [i,j] contains the regular fitness of organism j in species i"""
         fitness_matrix = []
         for i in range(len(self._list_of_species)):
             fitness_matrix[i] = []
-            for j in range(len(self._list_of_species[i])):
-                fitness_matrix[i][j] = self.__calculate_adjusted_fitness(self._list_of_species[i].organisms[j])
+            for j in range(len(self._list_of_species[i].organisms)):
+                fitness_matrix[i][j] = self._fitness_function(self._list_of_species[i].organisms[j])
+        return fitness_matrix[i][j]
+
+    def __calculate_adjusted_fitness_matrix(self):
+        """Returns a list of lists, entry [i,j] contains the adjusted fitness of organism j in species i"""
+        fitness_matrix = []
+        for i in range(len(self._list_of_species)):
+            fitness_matrix[i] = []
+            for j in range(len(self._list_of_species[i].organisms)):
+                fitness_matrix[i][j] = self.__calculate_adjusted_fitness(i, j)
         return fitness_matrix
 
-    def __calculate_adjusted_fitness(self, organism):
+    def __calculate_adjusted_fitness(self, species_index, organism_index):
         """Calculates the adjusted fitness of a single organism"""
-        assert isinstance(organism, Organism)
-        assert organism in self._organisms
-        fitness = self._fitness_function(organism)
+        assert species_index in range(len(self._list_of_species))
+        assert organism_index in range(len(self._list_of_species[species_index].organisms))
+        fitness = self.fitness_matrix[species_index][organism_index]
         # at least 1 since the sharing of an organism with itself is 1
         sum_of_sharing = sum([self.__sharing_function(
-            Genome.compatibility_distance(organism.genome(), other_organism.genome()), self._distance_threshold)
-            for other_organism in self._organisms])
+            Genome.compatibility_distance(self._list_of_species[species_index].organisms[organism_index].genome(),
+                                          other_organism.genome())) for other_organism in self._organisms])
         return fitness/sum_of_sharing
 
     # this was initially a static method but the threshold was ugly
