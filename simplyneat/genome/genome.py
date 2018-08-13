@@ -159,7 +159,7 @@ class Genome:
         return genome1.c1*len(excess)/N + genome1.c2*len(disjoint)/N + genome1.c3*average_weight_difference
 
     @staticmethod
-    def crossover(genome1, genome2, fitness1, fitness2):
+    def breed(genome1, genome2, fitness1, fitness2):
         """Fitness1, fitness2 are the regular fitnesses of genome1, genome2.
         Returns a genome containing the crossover of connection-genes from both genomes"""
         # Matching genes are inherited randomly, excess and disjoint genes are inherited from the better parent

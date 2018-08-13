@@ -8,7 +8,7 @@ print(genome1)
 genome2 = Genome(5, 2, connections2)
 print(genome2)
 
-genome3 = Genome.crossover(genome1, genome2, 1, 0)
+genome3 = Genome.breed(genome1, genome2, 1, 0)
 # genome3 should contain connections [ConnectionGene(1, 6, 7), ConnectionGene(2, 6, 8), ConnectionGene(3, 6, 9)] and one of [ConnectionGene(0, 5, 0), ConnectionGene(0, 5, -6)]
 print(genome3)
 

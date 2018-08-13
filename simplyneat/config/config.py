@@ -12,12 +12,12 @@ class Config:
         'c1': 1,
         'c2': 2,
         'c3': 3,
-        'weight_mutation_distribution': np.random.normal,           # weight to add in change_weight mutation
-        'connection_weight_mutation_distribution': np.random.normal,        # weight to give in add_connection mutation
-        'add_connection_probability': 0.3,                          # probability of add_connection mutation occurring
-        'add_node_probability': 0.3,                                # probability of add_node mutation occurring
-        'change_weight_probability': 0.8,                           # probability of change_weight mutation occurring
-    # TODO: the last 3 are supposed to be Bernoulli distribution functions, don't know how to send them with specific parameters and not just their output
+        'weight_mutation_distribution': np.random.normal,               # weight to add in change_weight mutation
+        'connection_weight_mutation_distribution': np.random.normal,    # weight to give in add_connection mutation
+        'add_connection_probability': 0.3,                              # probability of add_connection mutation occurring      # TODO: think of default value
+        'add_node_probability': 0.3,                                    # probability of add_node mutation occurring            # TODO: think of default value
+        'change_weight_probability': 0.8,                               # probability of change_weight mutation occurring       # TODO: think of default value
+
     }
 
     def __init__(self, params_dict=None):

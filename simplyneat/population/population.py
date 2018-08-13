@@ -56,26 +56,27 @@ class Population:
         new_species_distribution = self.__calculate_number_of_offsprings()
         new_organisms = []
         # create new organisms from existing ones
-        for i in range(len(self._list_of_species)):
+        for species_index in range(len(self._list_of_species)):
             # repeat once for each organism in the new species' distribution
-            for _ in new_species_distribution[i]:
-                # choose parents
-                index1 = random.choice(len(self._list_of_species[i].organisms))
-                index2 = random.choice(len(self._list_of_species[i].organisms))
-                genome1 = self._list_of_species[i].organisms[index1].genome
-                genome2 = self._list_of_species[i].organisms[index2].genome
+            for _ in new_species_distribution[species_index]:
+                # choose parents    # TODO: for now we choose randomly, maybe choose by fitness?
+                index1 = random.choice(len(self._list_of_species[species_index].organisms))
+                index2 = random.choice(len(self._list_of_species[species_index].organisms))
+                genome1 = self._list_of_species[species_index].organisms[index1].genome
+                genome2 = self._list_of_species[species_index].organisms[index2].genome
                 # crossover
-                new_organism = Genome.crossover(genome1, genome2,
-                                        self.adjusted_fitness_matrix[i][index1], self.adjusted_fitness_matrix[i][index2])
+                new_organism = Genome.breed(genome1, genome2,
+                                            self.adjusted_fitness_matrix[species_index][index1], self.adjusted_fitness_matrix[species_index][index2])
                 # TODO: instead of adjusted fitness matrix maybe use regular fitness
                 # perform the three mutations
+                # TODO: put the list of mutations in a class and run that instead of one-by-one
                 if np.random.binomial(1, self._change_weight_probability):
                     new_organism.mutate_connection_weight()
                 if np.random.binomial(1, self._add_connection_probability):
                     new_organism.mutate_add_connection()
                 if np.random.binomial(1, self._add_node_probability):
                     new_organism.mutate_add_node()
-                # note that the order was arbitrary, maybe there should be a specific order
+                # TODO: note that the order was arbitrary, maybe there should be a specific order
                 new_organisms.append(new_organism)
 
         # clear the list of species from previous generation
