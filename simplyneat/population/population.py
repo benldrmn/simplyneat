@@ -46,7 +46,7 @@ class Population:
         indexes = list(range(len(self._list_of_species)))
         random.shuffle(indexes)     # random permutation of indexes
         for index in indexes:
-            representative = self._list_of_species[index].representative()
+            representative = self._list_of_species[index].representative
             # try to assign organism to species with given index
             if Genome.compatibility_distance(organism.genome, representative.genome) < self._distance_threshold:
                 self._list_of_species[index].add_organism(organism)
@@ -63,6 +63,8 @@ class Population:
         new_organisms = []
         # create new organisms from existing ones
         for species_index in range(len(self._list_of_species)):
+            # set new representative for the species
+            self._list_of_species[species_index].randomize_representative()
             # repeat once for each organism in the new species' distribution
             for _ in new_species_distribution[species_index]:
                 # choose parents    # TODO: for now we choose randomly, maybe choose by fitness?
@@ -72,8 +74,7 @@ class Population:
                 genome2 = self._list_of_species[species_index].organisms[index2].genome
                 # crossover
                 new_organism = Genome.breed(genome1, genome2,
-                                            self.adjusted_fitness_matrix[species_index][index1], self.adjusted_fitness_matrix[species_index][index2])
-                # TODO: instead of adjusted fitness matrix maybe use regular fitness
+                                            self.fitness_matrix[species_index][index1], self.fitness_matrix[species_index][index2])
                 # perform the three mutations
                 # TODO: put the list of mutations in a class and run that instead of one-by-one
                 if np.random.binomial(1, self._change_weight_probability):
@@ -96,11 +97,14 @@ class Population:
         """returns a list, entry [i] is the number of offsprings for species i in the following generation"""
         species_adjusted_fitness = [sum(species_fitness_vector) for species_fitness_vector in self.adjusted_fitness_matrix]
         # species_adjusted_fitness[i] is the adjusted fitness of species i
-        total_fitness = sum(species_adjusted_fitness)           # total adjusted fitness of entire population
-        new_species_distribution = self._size * species_adjusted_fitness / total_fitness
-        assert sum(new_species_distribution) == self._size                           # offspring number proportionate to relative fitness
-        # TODO: the sum of the value returned above can be not equal to self._size due to rounding, fix this later
-        # or just hope this never happens (which it probably will)
+        total_adjusted_fitness = sum(species_adjusted_fitness)           # total adjusted fitness of entire population
+        # offspring number proportionate to relative fitness
+        new_species_distribution = self._size * species_adjusted_fitness / total_adjusted_fitness
+        new_size = sum(new_species_distribution)
+        assert new_size <= self._size
+        if new_size != self._size:
+            new_species_distribution[-1] += (self._size - new_size)
+        assert sum(new_species_distribution) == self._size
         return new_species_distribution
 
     def __calculate_fitness_matrix(self):
@@ -113,7 +117,8 @@ class Population:
         return fitness_matrix[i][j]
 
     def __calculate_adjusted_fitness_matrix(self):
-        """Returns a list of lists, entry [i,j] contains the adjusted fitness of organism j in species i"""
+        """Returns a list of lists, entry [i,j] contains the adjusted fitness of organism j in species i.
+        Meant to be called only AFTER we calculated the regular fitness matrix."""
         fitness_matrix = []
         for i in range(len(self._list_of_species)):
             fitness_matrix[i] = []
@@ -122,7 +127,8 @@ class Population:
         return fitness_matrix
 
     def __calculate_adjusted_fitness(self, species_index, organism_index):
-        """Calculates the adjusted fitness of a single organism"""
+        """Calculates the adjusted fitness of a single organism.
+        Meant to be called only AFTER we calculated the regular fitness matrix."""
         assert species_index in range(len(self._list_of_species))
         assert organism_index in range(len(self._list_of_species[species_index].organisms))
         fitness = self.fitness_matrix[species_index][organism_index]
