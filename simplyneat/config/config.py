@@ -1,5 +1,5 @@
 import logging
-
+import numpy as np
 
 class Config:
     # Dictionary of the config attributes and their default values
@@ -8,10 +8,15 @@ class Config:
         'distance_threshold': 3,
         'fitness_function': lambda neural_net: 1,  # TODO: implement a sensible default?
         'number_of_input_nodes': 256, #TODO: maybe another value
-        'number_of_output_nodes': 1, #TODO: same ^
+        'number_of_output_nodes': 6, #TODO: same ^
         'c1': 1,
-        'c2':2,
-        'c3':3,
+        'c2': 2,
+        'c3': 3,
+        'weight_mutation_distribution': np.random.normal,               # weight to add in change_weight mutation
+        'connection_weight_mutation_distribution': np.random.normal,    # weight to give in add_connection mutation
+        'add_connection_probability': 0.3,                              # probability of add_connection mutation occurring      # TODO: think of default value
+        'add_node_probability': 0.3,                                    # probability of add_node mutation occurring            # TODO: think of default value
+        'change_weight_probability': 0.8,                               # probability of change_weight mutation occurring       # TODO: think of default value
 
     }
 

@@ -1,8 +1,8 @@
 import logging
 
 
-class ConnectionGene():
-    # TODO: not thread safe
+class ConnectionGene:
+
     _current_innovation_number = 0
 
     def __init__(self, source_node, destination_node, weight, enabled_flag=True):
@@ -51,5 +51,9 @@ class ConnectionGene():
         logging.debug("Connection gene: %s changed from %s to %s", str(self), prev_state, new_state)
 
     def __str__(self):
-        return "Connection source: %d, destination: %d, weight: %d, innovation number: %d, enabled: %s" %\
-                (self._source_node, self._dest_node, self.weight, self._innovation, str(self._enabled))
+        return "(Connection source: %s, destination: %s, weight: %d, enabled: %s)" % (self._source_node, self._dest_node, self.weight, str(self._enabled))
+        # return "Connection source: %s, destination: %s, weight: %d, innovation number: %d, enabled: %s" %\
+        #         (self._source_node, self._dest_node, self.weight, self._innovation, str(self._enabled))
+
+    __repr__ = __str__
+

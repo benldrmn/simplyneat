@@ -4,32 +4,36 @@ from itertools import product
 import logging
 import random
 import numpy as np
+import copy
 
 
 class Genome:
+
     def __init__(self, config, connection_genes=None):
+        # Constants
         self._number_of_input_nodes = config.number_of_input_nodes
         self._number_of_output_nodes = config.number_of_output_nodes
         self._c1, self._c2, self._c3 = config.c1, config.c2, config.c3
+        self._weight_mutation_distribution = config.weight_mutation_distribution            # for mutation of changing weights
+        self._connection_weight_mutation_distribution = config.connection_weight_mutation_distribution      # for mutation of connection creation
 
         if self._number_of_input_nodes <= 0:
             raise ValueError('number of input nodes must be greater than 0')
         if self._number_of_output_nodes <= 0:
             raise ValueError('number of output nodes must be greater than 0')
 
-        # key: connection_genes dict key: innovation number
+        # Gene sequences
         if connection_genes is None:
             self._connection_genes = {}
         else:
-            self._connection_genes = dict(connection_genes)
-        self._node_genes = {}  # key: node_index (as in __encode_node)
+            self._connection_genes = dict(connection_genes)         # Key is innovation number
+        self._node_genes = {}                                       # Key is node_index (as in __encode_node)
 
         self.__init_node_genes()
 
     def __init_node_genes(self):
         """Initializes node for the entire genome, i.e. adds SENSOR, OUTPUT, BIAS nodes which are present in all
         genomes, and adds necessary nodes for a given dictionary of connection_genes"""
-        # TODO: number of input and output nodes should be in config
         for i in range(self._number_of_input_nodes):
             self.__add_node_gene('SENSOR', i)  # SENSOR is an input node
         for i in range(self._number_of_output_nodes):
@@ -78,7 +82,6 @@ class Genome:
         self._connection_genes[new_connection_gene.innovation] = new_connection_gene
         self._node_genes[source].add_connection_to(dest)
         self._node_genes[dest].add_connection_from(source)
-        # TODO: implement str(connection) and log it instead
         logging.info("New connection gene added: " + str(new_connection_gene))
 
     def __delete_connection_gene(self, innovation_number):
@@ -102,14 +105,14 @@ class Genome:
         else:
             logging.debug("Can't delete connection gene %s - not found", str(innovation_number))
 
-    # returns a dictionary of node-genes, the keys are indexes and values are node-genes
     @property
     def node_genes(self):
+        """Returns a dictionary of node-genes, the keys are indexes and values are node-genes"""
         return self._node_genes
 
-    # returns a dict of connection genes, where the key is the innovation number of the connection gene value
     @property
     def connection_genes(self):
+        """Returns a dict of connection genes, where the key is the innovation number of the connection gene value"""
         return self._connection_genes
 
     @property
@@ -143,7 +146,6 @@ class Genome:
         connection_genes1 = genome1.connection_genes()
         connection_genes2 = genome2.connection_genes()
         N = max(len(connection_genes1), len(connection_genes2))
-        #TODO: refactor to functions
 
         disjoint, excess = Genome.__calculate_mismatching_genes(connection_genes1, connection_genes2)
 
@@ -153,45 +155,42 @@ class Genome:
 
         average_weight_difference = np.mean(weight_differences)
 
-        # TODO: maybe find better solution for c1,c2,c3
+        # TODO: maybe find prettier solution for c1,c2,c3
         return genome1.c1*len(excess)/N + genome1.c2*len(disjoint)/N + genome1.c3*average_weight_difference
 
-    # TODO: change fitness1 and fitness2, we already have an adjusted fitness matrix maybe get it from there instead of computing once again
-    # TODO: maybe adjusted fitness instead of fitness?
     @staticmethod
-    def crossover(genome1, genome2, fitness1, fitness2):
-        """Returns a dictionary containing the crossover of connection-genes from both genomes"""
+    def breed(genome1, genome2, fitness1, fitness2):
+        """Fitness1, fitness2 are the regular fitnesses of genome1, genome2.
+        Returns a genome containing the crossover of connection-genes from both genomes"""
         # Matching genes are inherited randomly, excess and disjoint genes are inherited from the better parent
         # if parents have same fitness, the better parent is the one with the smaller genome
         if fitness2 > fitness1 or (fitness1 == fitness2 and genome2.size() < genome1.size()):
             genome1, genome2 = genome2, genome1
-            fitness1, fitness2 = fitness2, fitness1
             # Makes sure that genome1 is the genome of the fitter parent
 
-        connection_genes1 = genome1.connection_genes()
-        connection_genes2 = genome2.connection_genes()
+        connection_genes1 = genome1.connection_genes
+        connection_genes2 = genome2.connection_genes
         disjoint, excess = Genome.__calculate_mismatching_genes(connection_genes1, connection_genes2)
         mismatching = disjoint + excess
         matching = set(connection_genes1.keys()).intersection(set(connection_genes2.keys()))
-        result = {}
+        result_connection_genes = {}
 
         # matching genes
         for innovation_number in matching:
             if random.choice([True, False]):
-                result[innovation_number] = connection_genes1[innovation_number]
+                result_connection_genes[innovation_number] = copy.copy(connection_genes1[innovation_number])     # copied because mutations can change values
             else:
-                result[innovation_number] = connection_genes2[innovation_number]
+                result_connection_genes[innovation_number] = copy.copy(connection_genes2[innovation_number])
 
         # mismatched genes
         for innovation_number in mismatching:
             if innovation_number in connection_genes1.keys():
-                result[innovation_number] = connection_genes1[innovation_number]
+                result_connection_genes[innovation_number] = copy.copy(connection_genes1[innovation_number])
 
-        # TODO: return new genome instead of dictionary. connection-genes should be a mapping from edges to connections.
-        return result
+        return Genome(genome1.number_of_input_nodes, genome1.number_of_output_nodes, result_connection_genes)
 
     #TODO: not good! check innovation before creating a new connection!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-    def __mutate_add_connection(self):
+    def mutate_add_connection(self):
         # OUTPUT neurons can't be a source.
         # TODO: maybe allow output as source.
         possible_sources = [node_index for node_index in self._node_genes.keys() if self._node_genes[node_index].type != 'OUTPUT']
@@ -206,15 +205,15 @@ class Genome:
                           str(possible_sources), str(possible_destinations), str(self._connection_genes.keys()))
         else:
             source, dest = random.choice(possible_edges)  # randomly choose one edge from the possible edges
-            # TODO: normal is just a place-holder distribution. have it configurable
             # TODO: I assume that the new connection gene is always enabled after the mutation
-            self.__add_connection_gene(source, dest, np.random.normal(), True)
+            self.__add_connection_gene(source, dest, self._connection_weight_mutation_distribution(), True)
 
     def __mutate_delete_connection(self, source, dest):
-        #TODO: don't have source, dest as input but rather choose a connection randomly. Assert instead ifelse in __delete_connection_gene
+        #TODO: don't have source, dest as input but rather choose a connection randomly. Assert instead if else in __delete_connection_gene
         return self.__delete_connection_gene(source, dest)
 
-    def __mutate_add_node(self):
+    def mutate_add_node(self):
+        """Takes an existing edge and splits it in the middle with a new node"""
         if not self._connection_genes:
             logging.debug("add_note mutation failed: no connection genes to split")
         else:
@@ -229,15 +228,19 @@ class Genome:
             self.__add_connection_gene(new_node_index, old_dest, old_connection.weight, True)
             old_connection.disable()
 
+    def mutate_connection_weight(self):
+        """Alters the weight of a connection"""
+        connection_gene = random.choice(self._connection_genes.values())
+        connection_gene.weight += self._weight_mutation_distribution()
+        # TODO: read 4.1 better to understand how this works
+
     @staticmethod
     def __encode_node(prev_source, prev_dest):
         """Returns new node index based on the edge the node is splitting"""
-        return prev_source.node_index, prev_dest.node_index
-
-    def __mutate_connection_weight(self):
-        connection_gene = random.choice(self._connection_genes.values())
-        connection_gene.weight += random.normalvariate(0, 1)         # TODO: assignment to weight should work with property.setter
-        # TODO: standard normal distribution was arbitrary, better have config file
+        return prev_source, prev_dest
 
     def __str__(self):
         return 'A genome. Node genes: %s, Connection genes: %s' % (self._node_genes, self._connection_genes)
+
+    __repr__ = __str__
+
