@@ -7,6 +7,7 @@ class Species:
         self._organisms = list(organisms)  # initial organisms in the species
         if not self._organisms:
             raise ValueError("A species must be initialized with at least one organism")
+        #TODO: very important - currently new represntative is not assigned anywhere after construction of species!
         self._representative = random.choice(self._organisms)
         # new structural innovations of this generation of the species (refer to section 3.2 in the NEAT paper)
         self._structural_innovations_of_generation = []     # todo: should be global for population, not only species!
