@@ -1,156 +1,75 @@
 import random
 import logging
-from simplyneat.genome.genome import Genome
-from simplyneat.organism.organism import Organism
+
+from simplyneat.genome.breeders import GenomesBreeder
+from simplyneat.genome.genome import Genome, compatibility_distance
 from simplyneat.species.species import Species
-import numpy as np
 
 
 class Population:
 
-    _current_generation_number = 0      # TODO: static variable
-
-    def __init__(self, config, organisms=None, list_of_species=None):
-        """Builds the population according to a list of organisms and species. 
+ 
+    def __init__(self, config, genomes=None, species=None):
+        """Builds the population according to a list of genomes and species. 
         Assign each organism to one of the given species, calculate the fitness and adjusted fitness matrices."""
-        if list_of_species is None:
-            self._list_of_species = []                              # a list of species
+        if species is None:
+            self._list_of_species = []
         else:
-            self._list_of_species = list_of_species
-        if organisms is None:
-            self._organisms = []                                    # a list of organisms
+            self._list_of_species = species
+        if genomes is None:
+            self._genomes = []
         else:
-            self._organisms = organisms
+            self._genomes = genomes
+        #TODO: should probably be under the breeder and not in population init
         self._fitness_function = config.fitness_function
         self._distance_threshold = config.distance_threshold        # threshold for being in the same species
         self._size = config.population_size                         # population size
         self._change_weight_probability = config.change_weight_probability
         self._add_node_probability = config.add_node_probability
         self._add_connection_probability = config.add_connection_probability
-        self._config = config
         self._max_tournament_size = config.max_tournament_size
+        self._config = config
+        #TODO: have it configurable - if reset innovations list each generation - create a new breeder, else used the one given by the config
+        #TODO: breeder is not a population variable (used outside, for example in the neat class, to generate new population for old)
+        self._breeder = GenomesBreeder(self._config)
         # generation number
         Population._current_generation_number += 1
         self._generation_number = Population._current_generation_number
-        # divide the organisms into species
-        for organism in self._organisms:
-            self.speciate(organism)
-        # calculate fitness matrices, do so only AFTER speciation
-        self.fitness_matrix = self.__calculate_fitness_matrix()
-        self.adjusted_fitness_matrix = self.__calculate_adjusted_fitness_matrix()
-        logging.info("Created population number: %s" % self._generation_number)
+        # divide the genomes into species
+        self.__speciate_population()
 
-    def __add_organism(self, organism):
-        assert organism not in self._organisms
-        logging.info("New organism added: %s" % organism)
-        self._organisms.append(organism)
-        self.speciate(organism)
+    @property
+    def species(self):
+        return self._list_of_species
 
-    def speciate(self, organism):
-        """Assigns a species to a given organism, returning the index of the assigned species"""
+    @property
+    def genomes(self):
+        return self._genomes
+
+    def __add_genome(self, genome):
+        assert genome not in self._genomes
+        logging.info("New genome added: " + str(genome))
+        self._genomes.append(genome)
+        self.__assign_species(genome)
+
+    def __assign_species(self, genome):
+        """Assigns a species to a given genome, returning the index of the assigned species"""
         indexes = list(range(len(self._list_of_species)))
         random.shuffle(indexes)     # random permutation of indexes
         for index in indexes:
             representative = self._list_of_species[index].representative
-            # try to assign organism to species with given index
-            if Genome.compatibility_distance(organism.genome, representative.genome) < self._distance_threshold:
-                self._list_of_species[index].add_organism(organism)
-                logging.info("Assigned organism: %s to species %s" % (organism, index))
+
+
+            # try to assign genome to species with given index
+            if compatibility_distance(genome.genome, representative.genome) < self._distance_threshold:
+                self._list_of_species[index].add_genomes(genome)
+                logging.info("Assigned genome to species: " + str(genome) + str(index))
                 return index
         # this is a new species!
-        self._list_of_species.append(Species(organism))
-        return len(self._list_of_species)-1
+        self._list_of_species.append(Species(genome))
+        return len(self._list_of_species)-1  # the indexes are 0-based while len obviously isn't
 
-    def next_population(self):
-        """Breed each species breed two of its members according to the new distribution,
-        mutate the new offspring, then assign it a new species once again"""
-        new_species_distribution = self.__calculate_number_of_offsprings()
-        new_organisms = []
-        # create new organisms from existing ones
-        for species_index in range(len(self._list_of_species)):
-            # set new representative for the species
-            self._list_of_species[species_index].randomize_representative()
-            species_organisms = self._list_of_species[species_index].organisms      # list of organisms before breeding
-            # repeat once for each organism in the new species' distribution
-            for _ in new_species_distribution[species_index]:
-                # choose parents by winning a tournament
-                tournament_size = min(self._max_tournament_size, species_organisms)
-                parent_index1 = max(random.sample(species_organisms, tournament_size),
-                                    key=lambda organism_index: self.fitness_matrix[species_index][organism_index])
-                parent_index2 = max(random.sample(species_organisms, tournament_size),
-                                    key=lambda organism_index: self.fitness_matrix[species_index][organism_index])
-                genome1 = species_organisms[parent_index1].genome
-                genome2 = species_organisms[parent_index2].genome
-                # crossover
-                new_organism = Genome.breed(genome1, genome2,
-                                            self.fitness_matrix[species_index][parent_index1],
-                                            self.fitness_matrix[species_index][parent_index2])
-                # perform the three mutations
-                # TODO: put the list of mutations in a class and run that instead of one-by-one
-                if np.random.binomial(1, self._change_weight_probability):
-                    new_organism.mutate_connection_weight()
-                if np.random.binomial(1, self._add_connection_probability):
-                    new_organism.mutate_add_connection()
-                if np.random.binomial(1, self._add_node_probability):
-                    new_organism.mutate_add_node()
-                # TODO: note that the order was arbitrary, maybe there should be a specific order
-                new_organisms.append(new_organism)
-
-        # clear the list of species from previous generation
-        for species in self._list_of_species:
-            species.reset_organisms()
-
-        return Population(self._config, new_organisms, self._list_of_species)
-
-    def __calculate_number_of_offsprings(self):
-        """returns a list, entry [i] is the number of offsprings for species i in the following generation"""
-        species_adjusted_fitness = [sum(species_fitness_vector) for species_fitness_vector in self.adjusted_fitness_matrix]
-        # species_adjusted_fitness[i] is the adjusted fitness of species i
-        total_adjusted_fitness = sum(species_adjusted_fitness)           # total adjusted fitness of entire population
-        # offspring number proportionate to relative fitness
-        new_species_distribution = self._size * species_adjusted_fitness / total_adjusted_fitness
-        new_size = sum(new_species_distribution)
-        assert new_size <= self._size
-        if new_size != self._size:
-            new_species_distribution[-1] += (self._size - new_size)
-        assert sum(new_species_distribution) == self._size
-        return new_species_distribution
-
-    def __calculate_fitness_matrix(self):
-        """Returns a list of lists, entry [i,j] contains the regular fitness of organism j in species i"""
-        fitness_matrix = []
-        for i in range(len(self._list_of_species)):
-            fitness_matrix[i] = []
-            for j in range(len(self._list_of_species[i].organisms)):
-                fitness_matrix[i][j] = self._fitness_function(self._list_of_species[i].organisms[j])
-        return fitness_matrix[i][j]
-
-    def __calculate_adjusted_fitness_matrix(self):
-        """Returns a list of lists, entry [i,j] contains the adjusted fitness of organism j in species i.
-        Meant to be called only AFTER we calculated the regular fitness matrix."""
-        fitness_matrix = []
-        for i in range(len(self._list_of_species)):
-            fitness_matrix[i] = []
-            for j in range(len(self._list_of_species[i].organisms)):
-                fitness_matrix[i][j] = self.__calculate_adjusted_fitness(i, j)
-        return fitness_matrix
-
-    def __calculate_adjusted_fitness(self, species_index, organism_index):
-        """Calculates the adjusted fitness of a single organism.
-        Meant to be called only AFTER we calculated the regular fitness matrix."""
-        assert species_index in range(len(self._list_of_species))
-        assert organism_index in range(len(self._list_of_species[species_index].organisms))
-        fitness = self.fitness_matrix[species_index][organism_index]
-        # at least 1 since the sharing of an organism with itself is 1
-        sum_of_sharing = sum([self.__sharing_function(
-            Genome.compatibility_distance(self._list_of_species[species_index].organisms[organism_index].genome(),
-                                          other_organism.genome())) for other_organism in self._organisms])
-        return fitness/sum_of_sharing
-
-    # this was initially a static method but the threshold was ugly
-    def __sharing_function(self, distance):
-        if distance >= self._distance_threshold:
-            return 0
-        else:
-            return 1
-
+    def __speciate_population(self):
+        """Assign a species for every genome in the current population"""
+        for genome in self._genomes:
+            self.__assign_species(genome)

@@ -29,26 +29,20 @@ class ConnectionGene:
         return self._source_node, self._dest_node
 
     def enable(self):
-        self.__change_enable_state(True)
+        return self.__change_enabled_flag(True)
 
     def disable(self):
-        self.__change_enable_state(False)
+        return self.__change_enabled_flag(False)
 
     def is_enabled(self):
         return self._enabled is True
 
-    def __change_enable_state(self, change_to_enabled):
-        if self._enabled:
-            prev_state = 'ENABLED'
-        else:
-            prev_state = 'DISABLED'
-        if change_to_enabled:
-            new_state = 'ENABLED'
-            self._enabled = True
-        else:
-            new_state = 'DISABLED'
-            self._enabled = False
-        logging.debug("Connection gene: %s changed from %s to %s", str(self), prev_state, new_state)
+    def __change_enabled_flag(self, new_flag):
+        """Changes the enabled flag to new flag.
+        Returns true if the flag was actually changed (i.e. wasn't already == new_flag). Else, returns false."""
+        prev_flag = self._enabled
+        self._enabled = new_flag
+        return prev_flag != new_flag
 
     def __str__(self):
         return "(Connection source: %s, destination: %s, weight: %d, enabled: %s)" % (self._source_node, self._dest_node, self.weight, str(self._enabled))
