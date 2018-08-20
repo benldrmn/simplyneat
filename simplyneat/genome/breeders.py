@@ -18,27 +18,27 @@ class GenomesBreeder:
         self._config = config
 
     def breed_population(self, population):
-        new_population_organisms = []
+        new_population_genomes = []
         pairs_of_parents_to_breed = self.__generate_parents_pairs_to_breed(population)
         for genome1, genome2 in pairs_of_parents_to_breed:
-            new_population_organisms.append(self.__breed_parents(genome1, genome2))
+            new_population_genomes.append(self.__breed_parents(genome1, genome2))
         #TODO: we pass population.speceis to the new population without assigning new representatives! that's not good
         #TODO: don't forget to apply mutations and check innovations somewhere in here
-        return Population(self._config, new_population_organisms, population.species)
+        return Population(self._config, new_population_genomes, population.species)
 
     def __generate_parents_pairs_to_breed(self, population):
         species_list = population.species
         new_species_distribution = self.__calculate_offspring_per_species(species_list)
         pairs_of_parents_to_breed = []
-        # create new organisms from existing ones
+        # create new genomes from existing ones
         for species_index in range(len(species_list)):
-            # repeat once for each organism in the new species' distribution
+            # repeat once for each genomes in the new species' distribution
             for _ in range(new_species_distribution[species_index]):
                 # choose parents    # TODO: choose using k-tournament
-                index1 = random.choice(len(species_list[species_index].organisms))
-                index2 = random.choice(len(species_list[species_index].organisms))
-                genome1 = species_list[species_index].organisms[index1].genome
-                genome2 = species_list[species_index].organisms[index2].genome
+                index1 = random.choice(len(species_list[species_index].genomes))
+                index2 = random.choice(len(species_list[species_index].genomes))
+                genome1 = species_list[species_index].genomes[index1].genome
+                genome2 = species_list[species_index].genomes[index2].genome
                 pairs_of_parents_to_breed.append((genome1, genome2))
         return pairs_of_parents_to_breed
 
@@ -123,13 +123,12 @@ class GenomesBreeder:
         # TODO: read 4.1 better to understand how this works
 
 
-    def __calculate_adjusted_fitness(self, organism, population):
-        """Calculates the adjusted fitness of a single organism"""
-        # at least 1 since the sharing of an organism with itself is 1
-        #TODO: Fix the syntax. we should have list of spieces hold genomes - organism class should be deleted by now
-        sum_of_sharing = sum([self.__sharing_function(compatibility_distance(organism.genome, other_organism.genome))
-                              for other_organism in population.organisms])
-        return organism.fitness/sum_of_sharing
+    def __calculate_adjusted_fitness(self, genome, population):
+        """Calculates the adjusted fitness of a single genome"""
+        # at least 1 since the sharing of an genome with itself is 1
+        sum_of_sharing = sum([self.__sharing_function(compatibility_distance(genome.genome, other_genome.genome))
+                              for other_genome in population.genomes])
+        return genome.fitness / sum_of_sharing
 
     # todo: this was initially a static method but the threshold was ugly
     def __sharing_function(self, distance):
@@ -144,15 +143,15 @@ class GenomesBreeder:
         #TODO: clean this ugly solution:
         species_total_adjusted_fitness = [0] * len(list_of_species)
         for species_index in range(len(list_of_species)):
-            for organism in list_of_species:
-                species_total_adjusted_fitness[species_index] += self.__calculate_adjusted_fitness(organism)
+            for genome in list_of_species:
+                species_total_adjusted_fitness[species_index] += self.__calculate_adjusted_fitness(genome)
 
         # species_adjusted_fitness[i] is the adjusted fitness of species i
         population_total_adjusted_fitness = sum(species_total_adjusted_fitness)  # total adjusted fitness of entire population
         # offspring number proportionate to relative fitness
         new_species_distribution = [self._population_size * species_fitness / population_total_adjusted_fitness
                                     for species_fitness in species_total_adjusted_fitness]
-        # the number of organisms in a species is an integer
+        # the number of genomes in a species is an integer
         #TODO: maybe normalize instead of round?
         new_species_distribution = [int(round(x)) for x in new_species_distribution]
         #TODO: the population size changes from the initial config. probably ok. just document
