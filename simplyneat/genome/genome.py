@@ -18,6 +18,7 @@ class Genome:
         self._c1, self._c2, self._c3 = config.c1, config.c2, config.c3
         self._weight_mutation_distribution = config.weight_mutation_distribution            # for mutation of changing weights
         self._connection_weight_mutation_distribution = config.connection_weight_mutation_distribution      # for mutation of connection creation
+        self.config = config                            # left config public on pourpse, for crossover
 
         if self._number_of_input_nodes <= 0:
             raise ValueError('number of input nodes must be greater than 0')
@@ -110,13 +111,14 @@ class Genome:
         logging.info("Node gene deleted: " + str(self._node_genes[node_index]))
         del self._node_genes[node_index]
 
-    def __add_connection_gene(self, source, dest, weight, enabled = True):
+
+    def __add_connection_gene(self, source, dest, weight, enabled=True):
         # TODO: Liron: this may be redundant, I thought the constructor should receive the entire connection-gene-list rather than just adding a single connection
         # maybe this is useful for mutations?
         assert source in self._node_genes
         assert dest in self._node_genes
 
-        new_connection_gene = ConnectionGene(source, dest, weight, True)
+        new_connection_gene = ConnectionGene(source, dest, weight, enabled)
         self._connection_genes[new_connection_gene.innovation] = new_connection_gene
         self._node_genes[source].add_connection_to(dest)
         self._node_genes[dest].add_connection_from(source)
@@ -143,11 +145,13 @@ class Genome:
         else:
             logging.debug("Can't delete connection gene %s - not found", str(innovation_number))
 
+
     def __str__(self):
         return 'A genome. Node genes: %s, Connection genes: %s' % (self._node_genes, self._connection_genes)
 
     #TODO: is it a good practice? (avoid sneaky bugs)
     __repr__ = __str__
+
 
 
 def compatibility_distance(genome1, genome2):

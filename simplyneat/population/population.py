@@ -8,9 +8,10 @@ from simplyneat.species.species import Species
 
 class Population:
 
-    _current_generation_number = 0      # TODO: static variable
-
+ 
     def __init__(self, config, genomes=None, species=None):
+        """Builds the population according to a list of genomes and species. 
+        Assign each organism to one of the given species, calculate the fitness and adjusted fitness matrices."""
         if species is None:
             self._list_of_species = []
         else:
@@ -26,9 +27,10 @@ class Population:
         self._change_weight_probability = config.change_weight_probability
         self._add_node_probability = config.add_node_probability
         self._add_connection_probability = config.add_connection_probability
+        self._max_tournament_size = config.max_tournament_size
         self._config = config
-
         #TODO: have it configurable - if reset innovations list each generation - create a new breeder, else used the one given by the config
+        #TODO: breeder is not a population variable (used outside, for example in the neat class, to generate new population for old)
         self._breeder = GenomesBreeder(self._config)
         # generation number
         Population._current_generation_number += 1
@@ -57,6 +59,7 @@ class Population:
         for index in indexes:
             representative = self._list_of_species[index].representative
 
+
             # try to assign genome to species with given index
             if compatibility_distance(genome.genome, representative.genome) < self._distance_threshold:
                 self._list_of_species[index].add_genomes(genome)
@@ -65,7 +68,6 @@ class Population:
         # this is a new species!
         self._list_of_species.append(Species(genome))
         return len(self._list_of_species)-1  # the indexes are 0-based while len obviously isn't
-
 
     def __speciate_population(self):
         """Assign a species for every genome in the current population"""

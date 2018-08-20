@@ -20,7 +20,12 @@ class Species:
     @property
     def representative(self):
         return self._representative
-    # TODO: if species is created with just 1 genome (which it most always will be) that genome will necessarily be the representative
+
+    def randomize_representative(self):
+        """Sets a random representative. 
+        Useful for speciating a new generation of organisms according to old generation representatives, which were chosen at random"""
+        self._representative = random.choice(self._organisms)
+    # TODO: if species is created with just 1 genome (which it must always will be) that genome will necessarily be the representative
     # TODO: maybe we should have the representative be chosen each generation instead? maybe choose a representative by 1-center?
 
     def add_genomes(self, genome):

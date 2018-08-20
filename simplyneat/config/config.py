@@ -9,8 +9,8 @@ class Config:
         'population_size': 1000,
         'distance_threshold': 3,
         'fitness_function': lambda neural_net: 1,  # TODO: implement a sensible default?
-        'number_of_input_nodes': 256, #TODO: maybe another value
-        'number_of_output_nodes': 6, #TODO: same ^
+        'number_of_input_nodes': 256, # TODO: maybe another value
+        'number_of_output_nodes': 6, # TODO: same ^
         'c1': 1,
         'c2': 2,
         'c3': 3,
@@ -19,6 +19,7 @@ class Config:
         'add_connection_probability': 0.3,                              # probability of add_connection mutation occurring      # TODO: think of default value
         'add_node_probability': 0.3,                                    # probability of add_node mutation occurring            # TODO: think of default value
         'change_weight_probability': 0.8,                               # probability of change_weight mutation occurring       # TODO: think of default value
+        'max_tournament_size': 50,
         # probability of the chance that an inherited connection is disabled if it's disabled in either parent # TODO: think of a default value
         'inherit_disabled_connection_probability': 0.2,
         'processes_in_pool': multiprocessing.cpu_count(),
@@ -85,4 +86,5 @@ class Config:
         invalid_parameters = set(params_dict.keys()) - set(Config._attributes.keys())
         logging.info("The following parameters given by users are invalid (no attribute by that name exists for Config): "
                      + str(invalid_parameters))
+
 
