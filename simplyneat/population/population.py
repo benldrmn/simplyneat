@@ -56,6 +56,7 @@ class Population:
         random.shuffle(indexes)     # random permutation of indexes
         for index in indexes:
             representative = self._list_of_species[index].representative
+
             # try to assign genome to species with given index
             if compatibility_distance(genome.genome, representative.genome) < self._distance_threshold:
                 self._list_of_species[index].add_genomes(genome)
@@ -64,6 +65,7 @@ class Population:
         # this is a new species!
         self._list_of_species.append(Species(genome))
         return len(self._list_of_species)-1  # the indexes are 0-based while len obviously isn't
+
 
     def __speciate_population(self):
         """Assign a species for every genome in the current population"""
