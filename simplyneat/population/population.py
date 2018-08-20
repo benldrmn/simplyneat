@@ -8,7 +8,6 @@ from simplyneat.species.species import Species
 
 class Population:
 
- 
     def __init__(self, config, genomes=None, species=None):
         """Builds the population according to a list of genomes and species. 
         Assign each organism to one of the given species, calculate the fitness and adjusted fitness matrices."""
@@ -33,8 +32,6 @@ class Population:
         #TODO: breeder is not a population variable (used outside, for example in the neat class, to generate new population for old)
         self._breeder = GenomesBreeder(self._config)
         # generation number
-        Population._current_generation_number += 1
-        self._generation_number = Population._current_generation_number
         # divide the genomes into species
         self.__speciate_population()
 
