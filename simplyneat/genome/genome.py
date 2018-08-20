@@ -16,6 +16,7 @@ class Genome:
         self._c1, self._c2, self._c3 = config.c1, config.c2, config.c3
         self._weight_mutation_distribution = config.weight_mutation_distribution            # for mutation of changing weights
         self._connection_weight_mutation_distribution = config.connection_weight_mutation_distribution      # for mutation of connection creation
+        self.config = config                            # left config public on pourpse, for crossover
 
         if self._number_of_input_nodes <= 0:
             raise ValueError('number of input nodes must be greater than 0')
@@ -72,13 +73,13 @@ class Genome:
         logging.info("Node gene deleted: " + str(self._node_genes[node_index]))
         del self._node_genes[node_index]
 
-    def __add_connection_gene(self, source, dest, weight, enabled = True):
+    def __add_connection_gene(self, source, dest, weight, enabled=True):
         # Liron: this may be redundant, I thought the constructor should receive the entire connection-gene-list rather than just adding a single connection
         # maybe this is useful for mutations?
         assert source in self._node_genes
         assert dest in self._node_genes
 
-        new_connection_gene = ConnectionGene(source, dest, weight, True)
+        new_connection_gene = ConnectionGene(source, dest, weight, enabled)
         self._connection_genes[new_connection_gene.innovation] = new_connection_gene
         self._node_genes[source].add_connection_to(dest)
         self._node_genes[dest].add_connection_from(source)
@@ -187,13 +188,11 @@ class Genome:
             if innovation_number in connection_genes1.keys():
                 result_connection_genes[innovation_number] = copy.copy(connection_genes1[innovation_number])
 
-        return Genome(genome1.number_of_input_nodes, genome1.number_of_output_nodes, result_connection_genes)
+        return Genome(genome1.config, result_connection_genes)
 
-    #TODO: not good! check innovation before creating a new connection!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+    # TODO: not good! check innovation before creating a new connection!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
     def mutate_add_connection(self):
-        # OUTPUT neurons can't be a source.
-        # TODO: maybe allow output as source.
-        possible_sources = [node_index for node_index in self._node_genes.keys() if self._node_genes[node_index].type != 'OUTPUT']
+        possible_sources = self._node_genes.keys()
         # INPUT\BIAS neurons can't be a destination.
         possible_destinations = [node_index for node_index in self._node_genes.keys()
                                  if self._node_genes[node_index].type not in ['BIAS', 'INPUT']]
@@ -205,12 +204,11 @@ class Genome:
                           str(possible_sources), str(possible_destinations), str(self._connection_genes.keys()))
         else:
             source, dest = random.choice(possible_edges)  # randomly choose one edge from the possible edges
-            # TODO: I assume that the new connection gene is always enabled after the mutation
             self.__add_connection_gene(source, dest, self._connection_weight_mutation_distribution(), True)
 
-    def __mutate_delete_connection(self, source, dest):
-        #TODO: don't have source, dest as input but rather choose a connection randomly. Assert instead if else in __delete_connection_gene
-        return self.__delete_connection_gene(source, dest)
+    def __mutate_delete_connection(self):
+        innovation_number = random.choice(self.connection_genes.keys())
+        return self.__delete_connection_gene(innovation_number)
 
     def mutate_add_node(self):
         """Takes an existing edge and splits it in the middle with a new node"""
@@ -219,7 +217,7 @@ class Genome:
         else:
             old_connection = random.choice(list(self._connection_genes.values()))
             old_source, old_dest = old_connection.to_edge_tuple()
-            #TODO: CHECK IF THIS INNOVATION ALREADY EXISTS IN POPULATION!!! (LIKE IN ADD CONNECTION)
+            # TODO: CHECK IF THIS INNOVATION ALREADY EXISTS IN POPULATION!!! (LIKE IN ADD CONNECTION)
             new_node_index = self.__add_node_gene('HIDDEN', Genome.__encode_node(old_source, old_dest))     # Split the connection
             # the new connection leading into the new node from the old source has weight 1 according to the NEAT paper
             self.__add_connection_gene(old_source, new_node_index, 1, True)
@@ -243,4 +241,5 @@ class Genome:
         return 'A genome. Node genes: %s, Connection genes: %s' % (self._node_genes, self._connection_genes)
 
     __repr__ = __str__
+
 
