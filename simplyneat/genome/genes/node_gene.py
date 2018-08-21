@@ -18,6 +18,14 @@ class NodeGene:
     def node_index(self):
         return self._node_index
 
+    @property
+    def neighbors_to(self):
+        return self._has_connections_to
+
+    @property
+    def neighbors_from(self):
+        return self._has_connections_from
+
     def add_connection_to(self, destination_node):
         if destination_node in self._has_connections_to:
             raise ValueError("An edge already exists between %s and node number %d", str(self), destination_node)

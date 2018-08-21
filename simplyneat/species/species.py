@@ -24,9 +24,7 @@ class Species:
     def randomize_representative(self):
         """Sets a random representative. 
         Useful for speciating a new generation of organisms according to old generation representatives, which were chosen at random"""
-        self._representative = random.choice(self._organisms)
-    # TODO: if species is created with just 1 genome (which it must always will be) that genome will necessarily be the representative
-    # TODO: maybe we should have the representative be chosen each generation instead? maybe choose a representative by 1-center?
+        self._representative = random.choice(self._genomes)
 
     def add_genomes(self, genome):
         if not isinstance(genome, Genome):

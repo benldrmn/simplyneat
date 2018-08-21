@@ -112,6 +112,10 @@ class Genome:
         del self._node_genes[node_index]
 
     def add_connection_gene(self, source, dest, weight, enabled=True, innovation=-1):
+        """Adds a connection gene, if the connection does not create a cycle. 
+        By default innovation is -1, which means we set the innovation for the new gene by looking at the static
+        innovation count, otherwise the new gene's innovation number is innovation. 
+        Return the new innovation number if the connection was added, otherwise returns -1"""
         assert source in self._node_genes
         assert dest in self._node_genes
 
@@ -119,11 +123,21 @@ class Genome:
         if innovation != -1:
             new_connection_gene.innovation = innovation
         # Liron: pretty ugly syntax but I didn't feel like changing connection gene's static counter
+
+        assert not cycle_exists(self.node_genes)
         self._connection_genes[new_connection_gene.innovation] = new_connection_gene
         self._node_genes[source].add_connection_to(dest)
         self._node_genes[dest].add_connection_from(source)
-        logging.info("New connection gene added: " + str(new_connection_gene))
-        return new_connection_gene.innovation
+
+        if cycle_exists(self._node_genes):      # if there's a cycle revert the process
+            del self._connection_genes[new_connection_gene.innovation]
+            self._node_genes[source].delete_connection_to(dest)
+            self._node_genes[dest].delete_connection_from(source)
+            logging.info("Connection gene was not added due to loop: " + str(new_connection_gene))
+            return -1
+        else:
+            logging.info("New connection gene added: " + str(new_connection_gene))
+            return new_connection_gene.innovation
 
     def delete_connection_gene(self, innovation_number):
         if innovation_number in self._connection_genes:
@@ -200,3 +214,28 @@ def calculate_mismatching_genes(connection_genes1, connection_genes2):
     return disjoint, excess
 
 
+# Took this from https://algocoding.wordpress.com/2015/04/02/detecting-cycles-in-a-directed-graph-with-dfs-python/
+def cycle_exists(nodes):
+    """Returns true iff the connections create a cycle"""
+    color = {node: 'white' for node in nodes}
+    found_cycle = [False]           # set to array to pass by reference, not by value
+
+    for node in nodes:
+        if color[node] == 'white':
+            dfs_visit(nodes, color, found_cycle)
+        if found_cycle[0]:
+            break
+    return found_cycle[0]
+
+
+def dfs_visit(nodes, node, color, found_cycle):
+    if found_cycle[0]:
+        return
+    color[node] = 'gray'
+    for neighbor in node.neighbors_to:
+        if color[neighbor] == 'gray':
+            found_cycle[0] = True
+            return
+        if color[neighbor] == 'white':
+            dfs_visit(nodes, neighbor, color, found_cycle)
+    color[node] = 'black'
