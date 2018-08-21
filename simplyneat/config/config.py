@@ -1,20 +1,21 @@
 import logging
 import multiprocessing
-
 import numpy as np
+
 
 class Config:
     # Dictionary of the config attributes and their default values
+    # None means no default value, and should be set by the user
     _attributes = {
         'population_size': 1000,
         'distance_threshold': 3,
-        'fitness_function': lambda neural_net: 1,  # TODO: implement a sensible default?
-        'number_of_input_nodes': 256, # TODO: maybe another value
-        'number_of_output_nodes': 6, # TODO: same ^
-        'c1': 1,
-        'c2': 2,
-        'c3': 3,
-        'weight_mutation_distribution': np.random.normal,               # weight to add in change_weight mutation
+        'fitness_function': None,
+        'number_of_input_nodes': None,
+        'number_of_output_nodes': None,
+        'excess_coefficient': 2,            # TODO: find values and give meaningful documentation
+        'disjoint_coefficient': 2,
+        'weight_difference_coefficient': 1,
+        'weight_mutation_distribution': np.random.normal,               # weight to add in change_weight mutation               # TODO: check against paper
         'connection_weight_mutation_distribution': np.random.normal,    # weight to give in add_connection mutation
         'add_connection_probability': 0.3,                              # probability of add_connection mutation occurring      # TODO: think of default value
         'add_node_probability': 0.3,                                    # probability of add_node mutation occurring            # TODO: think of default value
@@ -25,8 +26,9 @@ class Config:
         'processes_in_pool': multiprocessing.cpu_count(),
         # the process pool used in neat_map - INITIALIZED BY Config.__init__ BASED ON processes_in_pool
         'pool': None,
+        'reset_breeder': False,
     }
-    #TODO: maybe use None in _attributes for attributes with no default? (and then log all attributes with no default and no param given)
+
     def __init__(self, params_dict=None):
         if params_dict is not None and not isinstance(params_dict, dict):
             raise ValueError("The supplied params_dict is not a dictionary")
@@ -42,7 +44,6 @@ class Config:
 
         self.__init_pool()
 
-    #TODO: neat_map doesn't sound right. maybe a different name?
     def neat_map(self, func, iterable):
         if self.pool:
             return self.pool.map(func, iterable)

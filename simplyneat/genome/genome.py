@@ -15,7 +15,8 @@ class Genome:
         # Constants
         self._number_of_input_nodes = config.number_of_input_nodes
         self._number_of_output_nodes = config.number_of_output_nodes
-        self._c1, self._c2, self._c3 = config.c1, config.c2, config.c3
+        self.excess_coefficient, self.disjoint_coefficient, self.weight_difference_coefficient = \
+            config.excess_coefficient, config.disjoint_coefficient, config.weight_difference_coefficient
         self._weight_mutation_distribution = config.weight_mutation_distribution            # for mutation of changing weights
         self._connection_weight_mutation_distribution = config.connection_weight_mutation_distribution      # for mutation of connection creation
         self.config = config                            # left config public on pourpse, for crossover
@@ -34,7 +35,6 @@ class Genome:
 
         self.__init_node_genes()
 
-        #todo: heavy calculations ahead (no todo here I think, just be aware)
         self._neural_net = self.__create_neural_network()
         self._fitness = config.fitness_function(self._neural_net) #TODO: assuming for now that's the fitness_function's required api
 
@@ -94,7 +94,7 @@ class Genome:
             # add source to dest's neighbors (edge in the opposite direction of course)
             dest_node.add_connection_from(source_node)
 
-    def __add_node_gene(self, node_type, node_index):
+    def add_node_gene(self, node_type, node_index):
         """Adds a single node gene to the genome"""
         assert node_index not in self._node_genes.keys()
         new_node_gene = NodeGene(node_type, node_index)
@@ -102,7 +102,7 @@ class Genome:
         logging.info("New node gene added: " + str(new_node_gene))
         return node_index
 
-    def __delete_node_gene(self, node_index):
+    def delete_node_gene(self, node_index):
         assert node_index in self._node_genes
         # we only delete nodes if they became isolated after a delete_connection mutation.
         # note that all nodes start as isolated nodes after the __add_node mutation.
@@ -111,21 +111,35 @@ class Genome:
         logging.info("Node gene deleted: " + str(self._node_genes[node_index]))
         del self._node_genes[node_index]
 
-
-    def __add_connection_gene(self, source, dest, weight, enabled=True):
-        # TODO: Liron: this may be redundant, I thought the constructor should receive the entire connection-gene-list rather than just adding a single connection
-        # maybe this is useful for mutations?
+    def add_connection_gene(self, source, dest, weight, enabled=True, innovation=-1):
+        """Adds a connection gene, if the connection does not create a cycle. 
+        By default innovation is -1, which means we set the innovation for the new gene by looking at the static
+        innovation count, otherwise the new gene's innovation number is innovation. 
+        Return the new innovation number if the connection was added, otherwise returns -1"""
         assert source in self._node_genes
         assert dest in self._node_genes
 
         new_connection_gene = ConnectionGene(source, dest, weight, enabled)
+        if innovation != -1:
+            new_connection_gene.innovation = innovation
+        # Liron: pretty ugly syntax but I didn't feel like changing connection gene's static counter
+
+        assert not cycle_exists(self.node_genes)
         self._connection_genes[new_connection_gene.innovation] = new_connection_gene
         self._node_genes[source].add_connection_to(dest)
         self._node_genes[dest].add_connection_from(source)
-        logging.info("New connection gene added: " + str(new_connection_gene))
 
-    def __delete_connection_gene(self, innovation_number):
-        # TODO: Liron: maybe deleting genes isn't necessary, for now we'll leave it be
+        if cycle_exists(self._node_genes):      # if there's a cycle revert the process
+            del self._connection_genes[new_connection_gene.innovation]
+            self._node_genes[source].delete_connection_to(dest)
+            self._node_genes[dest].delete_connection_from(source)
+            logging.info("Connection gene was not added due to loop: " + str(new_connection_gene))
+            return -1
+        else:
+            logging.info("New connection gene added: " + str(new_connection_gene))
+            return new_connection_gene.innovation
+
+    def delete_connection_gene(self, innovation_number):
         if innovation_number in self._connection_genes:
             logging.info("Connection gene deleted: " + str(self._connection_genes[innovation_number]))
             source, dest = self._connection_genes[innovation_number].to_edge_tuple()
@@ -145,13 +159,10 @@ class Genome:
         else:
             logging.debug("Can't delete connection gene %s - not found", str(innovation_number))
 
-
     def __str__(self):
         return 'A genome. Node genes: %s, Connection genes: %s' % (self._node_genes, self._connection_genes)
 
-    #TODO: is it a good practice? (avoid sneaky bugs)
     __repr__ = __str__
-
 
 
 def compatibility_distance(genome1, genome2):
@@ -174,8 +185,10 @@ def compatibility_distance(genome1, genome2):
 
     average_weight_difference = np.mean(weight_differences)
 
-    # TODO: maybe find prettier solution for c1,c2,c3
-    return genome1.c1*len(excess)/N + genome1.c2*len(disjoint)/N + genome1.c3*average_weight_difference
+    # TODO: maybe find prettier solution for coefficients
+    return genome1.excess_coefficient*len(excess)/N + \
+        genome1.disjoint_coefficient*len(disjoint)/N + \
+        genome1.weight_difference_coefficient*average_weight_difference
 
 
 def calculate_mismatching_genes(connection_genes1, connection_genes2):
@@ -199,3 +212,30 @@ def calculate_mismatching_genes(connection_genes1, connection_genes2):
             else:
                 excess.append(innovation_num)
     return disjoint, excess
+
+
+# Took this from https://algocoding.wordpress.com/2015/04/02/detecting-cycles-in-a-directed-graph-with-dfs-python/
+def cycle_exists(nodes):
+    """Returns true iff the connections create a cycle"""
+    color = {node: 'white' for node in nodes}
+    found_cycle = [False]           # set to array to pass by reference, not by value
+
+    for node in nodes:
+        if color[node] == 'white':
+            dfs_visit(nodes, color, found_cycle)
+        if found_cycle[0]:
+            break
+    return found_cycle[0]
+
+
+def dfs_visit(nodes, node, color, found_cycle):
+    if found_cycle[0]:
+        return
+    color[node] = 'gray'
+    for neighbor in node.neighbors_to:
+        if color[neighbor] == 'gray':
+            found_cycle[0] = True
+            return
+        if color[neighbor] == 'white':
+            dfs_visit(nodes, neighbor, color, found_cycle)
+    color[node] = 'black'

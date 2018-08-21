@@ -17,6 +17,10 @@ class ConnectionGene:
     def innovation(self):
         return self._innovation
 
+    @innovation.setter
+    def innovation(self, innovation):
+        self._innovation = innovation
+
     @property
     def weight(self):
         return self._weight

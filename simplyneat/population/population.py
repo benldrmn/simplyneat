@@ -8,7 +8,7 @@ from simplyneat.species.species import Species
 
 class Population:
 
-    def __init__(self, config, genomes=None, species=None):
+    def __init__(self, config, genomes=None, species=None, breeder=None):
         """Builds the population according to a list of genomes and species. 
         Assign each organism to one of the given species, calculate the fitness and adjusted fitness matrices."""
         if species is None:
@@ -19,21 +19,27 @@ class Population:
             self._genomes = []
         else:
             self._genomes = genomes
+        if breeder is None:
+            self._breeder = GenomesBreeder(self._config)
+        else:
+            self._breeder = breeder
         #TODO: should probably be under the breeder and not in population init
         self._fitness_function = config.fitness_function
         self._distance_threshold = config.distance_threshold        # threshold for being in the same species
         self._size = config.population_size                         # population size
-        self._change_weight_probability = config.change_weight_probability
-        self._add_node_probability = config.add_node_probability
-        self._add_connection_probability = config.add_connection_probability
-        self._max_tournament_size = config.max_tournament_size
         self._config = config
         #TODO: have it configurable - if reset innovations list each generation - create a new breeder, else used the one given by the config
         #TODO: breeder is not a population variable (used outside, for example in the neat class, to generate new population for old)
-        self._breeder = GenomesBreeder(self._config)
+
         # generation number
         # divide the genomes into species
         self.__speciate_population()
+        # set new representatives or eliminate extinct species according to new generation genomes
+        for species in self._list_of_species:
+            if len(species.genomes) != 0:
+                species.randomize_representative()          # set new representative after speciating
+            else:
+                self._list_of_species.remove(species)       # species has no members and is therefore extinct
 
     @property
     def species(self):
@@ -55,8 +61,6 @@ class Population:
         random.shuffle(indexes)     # random permutation of indexes
         for index in indexes:
             representative = self._list_of_species[index].representative
-
-
             # try to assign genome to species with given index
             if compatibility_distance(genome.genome, representative.genome) < self._distance_threshold:
                 self._list_of_species[index].add_genomes(genome)
