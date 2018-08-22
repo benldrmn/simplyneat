@@ -61,6 +61,9 @@ class NodeGene:
     __repr__ = __str__
 
 
-def encode_node(prev_source, prev_dest):
+def encode_node(prev_source_index, prev_dest_index):
     """Returns new node index based on the edge the node is splitting"""
-    return prev_source, prev_dest
+    return prev_source_index, prev_dest_index
+
+
+
