@@ -5,7 +5,7 @@ import numpy as np
 
 class Config:
     # Dictionary of the config attributes and their default values
-    # None means no default value, and should be set by the user
+    # None means no default value, and should be set by the user, unless stated otherwise
     _attributes = {
         # have to be set by the user
         'fitness_function': None,
