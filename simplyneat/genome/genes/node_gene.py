@@ -80,9 +80,9 @@ def encode_node(prev_source_index, prev_dest_index):
 
 
 class NodeType(Enum):
-    BIAS = 0
+    BIAS = 'BIAS'
     # SENSOR node is a different name for an INPUT node
-    SENSOR = 1
-    INPUT = 1
-    HIDDEN = 2
-    OUTPUT = 3
+    SENSOR = 'INPUT'
+    INPUT = 'INPUT'
+    HIDDEN = 'HIDDEN'
+    OUTPUT = 'OUTPUT'

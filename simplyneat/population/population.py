@@ -2,8 +2,8 @@ import logging
 import random
 
 from simplyneat.genome.genome import compatibility_distance
+from simplyneat.statistics import StatisticsTypes
 from simplyneat.species.species import Species
-from simplyneat.neat import StatisticsTypes
 import numpy as np
 
 
