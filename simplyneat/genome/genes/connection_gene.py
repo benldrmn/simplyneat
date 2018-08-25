@@ -3,15 +3,28 @@ import logging
 
 class ConnectionGene:
 
-    _current_innovation_number = 0
+    _current_innovation_number = 0 #TODO: not thread safe
 
-    def __init__(self, source_node, destination_node, weight, enabled_flag=True):
-        self._source_node = source_node             # the index of the source node
-        self._dest_node = destination_node          # the index of the dest node
+    def __init__(self, source_node, destination_node, weight, enabled_flag=True, innovation=None):
+        self._source_node = source_node
+        self._dest_node = destination_node
         self._weight = weight
         self._enabled = enabled_flag
-        self._innovation = ConnectionGene._current_innovation_number
-        ConnectionGene._current_innovation_number += 1
+        if innovation is None:
+            self._innovation = ConnectionGene._current_innovation_number
+            ConnectionGene._current_innovation_number += 1
+        else:
+            if not isinstance(innovation, int):
+                raise ValueError("innovation must be of type int (or None for the next possible innovation)")
+            self._innovation = innovation
+
+    @property
+    def source_node(self):
+        return self._source_node
+
+    @property
+    def destination_node(self):
+        return self._dest_node
 
     @property
     def innovation(self):
@@ -30,7 +43,7 @@ class ConnectionGene:
         self._weight = weight
 
     def to_edge_tuple(self):
-        return self._source_node, self._dest_node
+        return self._source_node.node_index, self._dest_node.node_index
 
     def enable(self):
         return self.__change_enabled_flag(True)
@@ -49,9 +62,19 @@ class ConnectionGene:
         return prev_flag != new_flag
 
     def __str__(self):
-        return "(Connection source: %s, destination: %s, weight: %d, enabled: %s)" % (self._source_node, self._dest_node, self.weight, str(self._enabled))
+        return "(Connection source: %s, destination: %s, weight: %d, enabled: %s, innovation: %s)" \
+               % (self._source_node, self._dest_node, self.weight, str(self._enabled), str(self._innovation))
         # return "Connection source: %s, destination: %s, weight: %d, innovation number: %d, enabled: %s" %\
         #         (self._source_node, self._dest_node, self.weight, self._innovation, str(self._enabled))
+
+    def __key(self):
+        return (self._source_node, self._dest_node, self._weight, self._enabled, self._innovation)
+
+    def __eq__(self, y):
+        return self.__key() == y.__key()
+
+    def __hash__(self):
+        return hash(self.__key())
 
     __repr__ = __str__
 

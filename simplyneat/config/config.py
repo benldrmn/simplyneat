@@ -35,7 +35,7 @@ class Config:
 
         # by iterating over _attributes, we ensure that all of the needed attributes exist and are set (by setattr).
         # get returns None if attribute_name does not exit.
-        for attribute_name, _ in Config._attributes:
+        for attribute_name in Config._attributes.keys():
             self.__set(attribute_name, params_dict.get(attribute_name), Config._attributes.get(attribute_name))
 
         if params_dict:
@@ -54,7 +54,7 @@ class Config:
         assert attribute_name in Config._attributes
 
         # if no value supplied, set the provided default value to attribute
-        if not provided_value:
+        if provided_value is None:
             setattr(self, attribute_name, default_value)
             logging.info("Config attribute %s set to default value %s" % (attribute_name, default_value))
         else:

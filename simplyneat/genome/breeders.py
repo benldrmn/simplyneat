@@ -4,7 +4,7 @@ import logging
 import itertools
 
 from simplyneat.genome.genes.connection_gene import ConnectionGene
-from simplyneat.genome.genes.node_gene import NodeGene, encode_node
+from simplyneat.genome.genes.node_gene import NodeGene, encode_node, NodeType
 from simplyneat.genome.genome import calculate_mismatching_genes, Genome, compatibility_distance
 from simplyneat.population.population import Population
 import numpy as np
@@ -95,10 +95,10 @@ class GenomesBreeder:
 
     def __mutate_add_connection(self, genome):
         assert isinstance(genome, Genome)
-        possible_sources = genome.node_genes
+        possible_sources = genome.node_genes.keys()
         # INPUT\BIAS neurons can't be a destination.
-        possible_destinations = [node_index for node_index in genome.node_genes
-                                 if genome.node_genes[node_index].type not in ['BIAS', 'INPUT']]
+        possible_destinations = [node_index for node_index in genome.node_genes.keys()
+                                 if genome.node_genes[node_index].type not in [NodeType.BIAS, NodeType.INPUT]]
         # Two edges with the same source and destination are not possible.
         possible_edges = set(itertools.product(possible_sources, possible_destinations)) -\
                          set(map(lambda connection_gene: connection_gene.to_edge_tuple(), genome.connection_genes.values()))
@@ -106,18 +106,21 @@ class GenomesBreeder:
             logging.debug("No possible edges. Possible sources: %s, possible destinations: %s, current edges: %s",
                           str(possible_sources), str(possible_destinations), str(genome.connection_genes.keys()))
         else:
-            source, dest = random.choice(possible_edges)  # randomly choose one edge from the possible edges
+            source_index, dest_index = random.choice(possible_edges)  # randomly choose one edge from the possible edges
             # TODO: I assume that the new connection gene is always enabled after the mutation
             new_innovation = -1         # default value, sets new innovation by static innovation counter
-            if (source, dest) in self._innovations_dictionary.keys():
-                new_innovation = self._innovations_dictionary[(source, dest)]       # innovation from previous mutations
-            new_innovation = genome.add_connection_gene(source, dest, self._connection_weight_mutation_distribution, True, new_innovation)
+            if (source_index, dest_index) in self._innovations_dictionary.keys():
+                # innovation from previous mutations
+                new_innovation = self._innovations_dictionary[(source_index, dest_index)]
+            new_innovation = genome.add_connection_gene(genome.node_genes[source_index], genome.node_genes[dest_index],
+                                                        self._connection_weight_mutation_distribution,
+                                                        True, new_innovation)
             # if new_innovation was -1 then we get the new innovation number from static innovation counter
             # otherwise this changes nothing since we assign the value we took from the dictionary in the first place
 
             # new_innovation can only be -1 if the connection was not added, due to it closing a cycle
             if new_innovation != -1:
-                self._innovations_dictionary[(source, dest)] = new_innovation
+                self._innovations_dictionary[(source_index, dest_index)] = new_innovation
 
 
     def __mutate_add_node(self, genome):
@@ -127,7 +130,7 @@ class GenomesBreeder:
             logging.debug("add_note mutation failed: no connection genes to split")
         else:
             old_connection = random.choice(list(genome.connection_genes.values()))
-            old_source, old_dest = old_connection.to_edge_tuple()
+            old_source, old_dest = old_connection.source_node, old_connection.destination_node
             #TODO: CHECK IF THIS INNOVATION ALREADY EXISTS IN POPULATION!!! (LIKE IN ADD CONNECTION)
             new_node_index = encode_node(old_source, old_dest)
             # the new connection leading into the new node from the old source has weight 1 according to the NEAT paper
@@ -137,10 +140,9 @@ class GenomesBreeder:
             new_connection_from_node = ConnectionGene(new_node_index, old_dest, old_connection.weight, True)
             old_connection.disable()
 
-            # Big no-no to Ben for not using these handy-dandy functions earlier!
-            genome.add_node_gene('HIDDEN', new_node_index)
-            genome.add_connection_gene(old_source, new_node_index, 1, True)
-            genome.add_connection_gene(new_node_index, old_dest, old_connection.weight, True)
+            new_node_gene = genome.add_node_gene(NodeType.HIDDEN, new_node_index)
+            genome.add_connection_gene(old_source, new_node_gene, 1, True)
+            genome.add_connection_gene(new_node_gene, old_dest, old_connection.weight, True)
 
     def __mutate_connection_weight(self, genome):
         """Alters the weight of a connection"""

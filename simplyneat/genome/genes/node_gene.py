@@ -1,62 +1,75 @@
 import logging
+from enum import Enum
 
 
 class NodeGene:
 
     def __init__(self, node_type, node_index):
+        #TODO: make sure that node_type is a valid enum member
         # SENSOR, OUTPUT, HIDDEN or BIAS
-        self.type = node_type  # todo: consider enum or something, don't leave as a string. strings suck
+        self._type = node_type
         # a number of internal book-keeping, as in the NEAT paper's illustrations
         self._node_index = node_index
+        self._incoming_connections = set()
+        self._outgoing_connections = set()
 
-        # nodes that connect to this node as destination
-        self._has_connections_from = set()
-        # nodes that this node connects to as source
-        self._has_connections_to = set()
+    @property
+    def node_type(self):
+        return self._type
 
     @property
     def node_index(self):
         return self._node_index
 
     @property
-    def neighbors_to(self):
-        return self._has_connections_to
+    def incoming_connections(self):
+        return self._incoming_connections
 
     @property
-    def neighbors_from(self):
-        return self._has_connections_from
+    def outgoing_connections(self):
+        return self._outgoing_connections
 
-    def add_connection_to(self, destination_node):
-        if destination_node in self._has_connections_to:
-            raise ValueError("An edge already exists between %s and node number %d", str(self), destination_node)
-        self._has_connections_to.add(destination_node)
+    def add_incoming_connection(self, incoming_connection):
+        self._incoming_connections.add(incoming_connection)
 
-    def delete_connection_to(self, destination_node):
-        if destination_node not in self._has_connections_to:
-            raise ValueError("No edge exists between %s and node number %d", str(self), destination_node)
-        self._has_connections_to.remove(destination_node)
+    # we have 2 different delete function instead of a unified function as we may have a node may have both connection
+    # a->b and b->a and thus there might be an ambiguity in regard to which connection we should delete
+    def delete_incoming_connection(self, incoming_connection):
+        if incoming_connection not in self._incoming_connections:
+            raise ValueError("Node %s has no incoming connections %s", str(self), str(incoming_connection))
+        else:
+            return self._incoming_connections.remove(incoming_connection)
 
-    def add_connection_from(self, source_node):
-        if source_node in self._has_connections_from:
-            raise ValueError("An edge already exists between node number %d and %s", source_node, str(self))
-        self._has_connections_from.add(source_node)
+    def add_outgoing_connection(self, outgoing_connection):
+        self._outgoing_connections.add(outgoing_connection)
 
-    def delete_connection_from(self, source_node):
-        if source_node not in self._has_connections_from:
-            raise ValueError("No edge exists between node number %d and %s", source_node, str(self))
-        self._has_connections_from.remove(source_node)
+    def delete_outgoing_connection(self, outgoing_connection):
+        if outgoing_connection not in self._outgoing_connections:
+            raise ValueError("Node %s has no outgoing connection %s", str(self), str(outgoing_connection))
+        else:
+            return self._outgoing_connections.remove(outgoing_connection)
 
     def is_isolated(self):
-        if not self._has_connections_from and not self._has_connections_to:
+        if not self._incoming_connections and not self._outgoing_connections:
             return True
         return False
 
     def __str__(self):
-        return "(Node type: %s, index: %s)" % (self.type, self._node_index)
+        return "(Node type: %s, index: %s)" % (self.node_type, self._node_index)
         # return "Node type: %s, index: %d," \
         #        " has connections from: %s," \
         #        " has connections to: %s" %\
         #        (self.type, self._node_index, str(self._has_connections_from), str(self._has_connections_to))
+
+    def __key(self):
+        #TODO: also connection sets?
+        return (self._type, self._node_index)
+
+    def __eq__(self, y):
+        return self.__key() == y.__key()
+
+    def __hash__(self):
+        return hash(self.__key())
 
     __repr__ = __str__
 
@@ -64,3 +77,12 @@ class NodeGene:
 def encode_node(prev_source, prev_dest):
     """Returns new node index based on the edge the node is splitting"""
     return prev_source, prev_dest
+
+
+class NodeType(Enum):
+    BIAS = 0
+    # SENSOR node is a different name for an INPUT node
+    SENSOR = 1
+    INPUT = 1
+    HIDDEN = 2
+    OUTPUT = 3
