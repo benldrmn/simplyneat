@@ -8,10 +8,8 @@ class Species:
         self._genomes = list(genomes)  # initial genomes in the species
         if not self._genomes:
             raise ValueError("A species must be initialized with at least one genome")
-        #TODO: very important - currently new represntative is not assigned anywhere after construction of species!
-        self._representative = random.choice(self._genomes)
-        # new structural innovations of this generation of the species (refer to section 3.2 in the NEAT paper)
-        self._structural_innovations_of_generation = []     # todo: should be global for population, not only species!
+            self._representative = random.choice(self._genomes)
+            # new structural innovations of this generation of the species (refer to section 3.2 in the NEAT paper)
 
     @property
     def genomes(self):
@@ -32,5 +30,5 @@ class Species:
         self._genomes.append(genome)
 
     def reset_genomes(self):
-        """Removes all genomes from species while maintaining the original representative"""
+        """Removes all genomes from species while maintaining the previous representative"""
         self._genomes = []

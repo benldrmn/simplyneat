@@ -20,7 +20,7 @@ class Genome:
             config.excess_coefficient, config.disjoint_coefficient, config.weight_difference_coefficient
         self._weight_mutation_distribution = config.weight_mutation_distribution            # for mutation of changing weights
         self._connection_weight_mutation_distribution = config.connection_weight_mutation_distribution      # for mutation of connection creation
-        self.config = config                            # left config public on pourpse, for crossover TODO: what?
+        self.config = config                            # TODO: (property?)left config public on pourpse, for crossover TODO: what?
 
         if self._number_of_input_nodes <= 0:
             raise ValueError('number of input nodes must be greater than 0')
@@ -59,6 +59,10 @@ class Genome:
     def size(self):
         """Returns the length of the entire genome, connection genes and node genes combined"""
         return len(self._connection_genes) + len(self._node_genes)
+
+    @property
+    def fitness(self):
+        return self._fitness
 
     def __init_node_genes(self):
         """Initializes node for the entire genome, i.e. adds SENSOR, OUTPUT, BIAS nodes which are present in all
@@ -210,12 +214,12 @@ def calculate_mismatching_genes(connection_genes1, connection_genes2):
 # Took this from https://algocoding.wordpress.com/2015/04/02/detecting-cycles-in-a-directed-graph-with-dfs-python/
 def cycle_exists(nodes):
     """Returns true iff the connections create a cycle"""
-    color = {node: 'white' for node in nodes}
+    color = {node: 'not visited' for node in nodes}
     found_cycle = [False]           # set to array to pass by reference, not by value
 
     for node in nodes:
-        if color[node] == 'white':
-            dfs_visit(nodes, node, color, found_cycle)
+        if color[node] == 'not visited':
+            dfs_visit(nodes, color, found_cycle)
         if found_cycle[0]:
             break
     return found_cycle[0]
@@ -224,12 +228,11 @@ def cycle_exists(nodes):
 def dfs_visit(nodes, node, color, found_cycle):
     if found_cycle[0]:
         return
-    color[node] = 'gray'
-    for connection in node.outgoing_connections:
-        dest = connection.destination
-        if color[dest] == 'gray':
+    color[node] = 'visiting'
+    for neighbor in node.neighbors_to:
+        if color[neighbor] == 'visiting':
             found_cycle[0] = True
             return
-        if color[dest] == 'white':
-            dfs_visit(nodes, dest, color, found_cycle)
-    color[node] = 'black'
+        if color[neighbor] == 'not visited':
+            dfs_visit(nodes, neighbor, color, found_cycle)
+    color[node] = 'previously visited'

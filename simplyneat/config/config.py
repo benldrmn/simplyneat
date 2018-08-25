@@ -7,11 +7,17 @@ class Config:
     # Dictionary of the config attributes and their default values
     # None means no default value, and should be set by the user
     _attributes = {
-        'population_size': 1000,
-        'distance_threshold': 3,
+        # have to be set by the user
         'fitness_function': None,
         'number_of_input_nodes': None,
         'number_of_output_nodes': None,
+
+        # have default values, don't need to be set
+        'number_of_generations': 1000,
+        'population_size': 1000,
+        'elite_group_size': 50,                                         # number of members who always pass to next generation
+
+        'compatibility_threshold': 6,
         'excess_coefficient': 2,            # TODO: find values and give meaningful documentation
         'disjoint_coefficient': 2,
         'weight_difference_coefficient': 1,
