@@ -5,9 +5,9 @@ class ConnectionGene:
 
     _current_innovation_number = 0
 
-    def __init__(self, source_node, destination_node, weight, enabled_flag=True):
-        self._source_node = source_node             # the index of the source node
-        self._dest_node = destination_node          # the index of the dest node
+    def __init__(self, source_node_index, destination_node_index, weight, enabled_flag=True):
+        self._source_node_index = source_node_index             # the index of the source node
+        self._dest_node_index = destination_node_index          # the index of the dest node
         self._weight = weight
         self._enabled = enabled_flag
         self._innovation = ConnectionGene._current_innovation_number
@@ -30,7 +30,7 @@ class ConnectionGene:
         self._weight = weight
 
     def to_edge_tuple(self):
-        return self._source_node, self._dest_node
+        return self._source_node_index, self._dest_node_index
 
     def enable(self):
         return self.__change_enabled_flag(True)
@@ -49,7 +49,7 @@ class ConnectionGene:
         return prev_flag != new_flag
 
     def __str__(self):
-        return "(Connection source: %s, destination: %s, weight: %d, enabled: %s)" % (self._source_node, self._dest_node, self.weight, str(self._enabled))
+        return "(Connection source: %s, destination: %s, weight: %d, enabled: %s)" % (self._source_node_index, self._dest_node_index, self.weight, str(self._enabled))
         # return "Connection source: %s, destination: %s, weight: %d, innovation number: %d, enabled: %s" %\
         #         (self._source_node, self._dest_node, self.weight, self._innovation, str(self._enabled))
 

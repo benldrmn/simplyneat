@@ -11,6 +11,7 @@ class Genome:
 
     #todo: consider adding node_genes to the ctor so we can define each nodes activation function
     #todo: that way when we mutate a genome, we can get the nodes list and alter one nodes activation
+
     def __init__(self, config, connection_genes=None):
         # Constants
         self._number_of_input_nodes = config.number_of_input_nodes
@@ -55,6 +56,10 @@ class Genome:
     def size(self):
         """Returns the length of the entire genome, connection genes and node genes combined"""
         return len(self._connection_genes) + len(self._node_genes)
+
+    @property
+    def fitness(self):
+        return self._fitness
 
     def __init_node_genes(self):
         """Initializes node for the entire genome, i.e. adds SENSOR, OUTPUT, BIAS nodes which are present in all
@@ -111,28 +116,28 @@ class Genome:
         logging.info("Node gene deleted: " + str(self._node_genes[node_index]))
         del self._node_genes[node_index]
 
-    def add_connection_gene(self, source, dest, weight, enabled=True, innovation=-1):
+    def add_connection_gene(self, source_index, dest_index, weight, enabled=True, innovation=-1):
         """Adds a connection gene, if the connection does not create a cycle. 
         By default innovation is -1, which means we set the innovation for the new gene by looking at the static
         innovation count, otherwise the new gene's innovation number is innovation. 
         Return the new innovation number if the connection was added, otherwise returns -1"""
-        assert source in self._node_genes
-        assert dest in self._node_genes
+        assert source_index in self._node_genes
+        assert dest_index in self._node_genes
 
-        new_connection_gene = ConnectionGene(source, dest, weight, enabled)
+        new_connection_gene = ConnectionGene(source_index, dest_index, weight, enabled)
         if innovation != -1:
             new_connection_gene.innovation = innovation
         # Liron: pretty ugly syntax but I didn't feel like changing connection gene's static counter
 
         assert not cycle_exists(self.node_genes)
         self._connection_genes[new_connection_gene.innovation] = new_connection_gene
-        self._node_genes[source].add_connection_to(dest)
-        self._node_genes[dest].add_connection_from(source)
+        self._node_genes[source_index].add_connection_to(dest_index)
+        self._node_genes[dest_index].add_connection_from(source_index)
 
         if cycle_exists(self._node_genes):      # if there's a cycle revert the process
             del self._connection_genes[new_connection_gene.innovation]
-            self._node_genes[source].delete_connection_to(dest)
-            self._node_genes[dest].delete_connection_from(source)
+            self._node_genes[source_index].delete_connection_to(dest_index)
+            self._node_genes[dest_index].delete_connection_from(source_index)
             logging.info("Connection gene was not added due to loop: " + str(new_connection_gene))
             return -1
         else:
@@ -152,10 +157,10 @@ class Genome:
 
             if dest_gene.is_isolated():
                 logging.info("Removing isolated node gene: %s", str(dest_gene))
-                self.__delete_node_gene(dest)
+                self.delete_node_gene(dest)
             if source_gene.is_isolated():
                 logging.info("Removing isolated node gene: %s", str(source_gene))
-                self.__delete_node_gene(source)
+                self.delete_node_gene(source)
         else:
             logging.debug("Can't delete connection gene %s - not found", str(innovation_number))
 
@@ -217,11 +222,11 @@ def calculate_mismatching_genes(connection_genes1, connection_genes2):
 # Took this from https://algocoding.wordpress.com/2015/04/02/detecting-cycles-in-a-directed-graph-with-dfs-python/
 def cycle_exists(nodes):
     """Returns true iff the connections create a cycle"""
-    color = {node: 'white' for node in nodes}
+    color = {node: 'not visited' for node in nodes}
     found_cycle = [False]           # set to array to pass by reference, not by value
 
     for node in nodes:
-        if color[node] == 'white':
+        if color[node] == 'not visited':
             dfs_visit(nodes, color, found_cycle)
         if found_cycle[0]:
             break
@@ -231,11 +236,11 @@ def cycle_exists(nodes):
 def dfs_visit(nodes, node, color, found_cycle):
     if found_cycle[0]:
         return
-    color[node] = 'gray'
+    color[node] = 'visiting'
     for neighbor in node.neighbors_to:
-        if color[neighbor] == 'gray':
+        if color[neighbor] == 'visiting':
             found_cycle[0] = True
             return
-        if color[neighbor] == 'white':
+        if color[neighbor] == 'not visited':
             dfs_visit(nodes, neighbor, color, found_cycle)
-    color[node] = 'black'
+    color[node] = 'previously visited'

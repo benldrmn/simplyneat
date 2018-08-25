@@ -3,30 +3,31 @@ import copy
 import logging
 import itertools
 
-from simplyneat.genome.genes.connection_gene import ConnectionGene
-from simplyneat.genome.genes.node_gene import NodeGene, encode_node
+from simplyneat.genome.genes.node_gene import encode_node
 from simplyneat.genome.genome import calculate_mismatching_genes, Genome, compatibility_distance
 from simplyneat.population.population import Population
 import numpy as np
 
 
-class GenomesBreeder:
+class Breeder:
+    """In charge of breeding populations, while applying mutations to new genomes. Keeps track of all innovations."""
     def __init__(self, config):
-        self._distance_threshold = config.distance_threshold
+        self._compatibility_threshold = config.compatibility_threshold
         self._population_size = config.population_size
         self._connection_weight_mutation_distribution = config.connection_weight_mutation_distribution
         self._weight_mutation_distribution = config.weight_mutation_distribution
         self._reset_breeder = config.reset_breeder
         self._max_tournament_size = config.max_tournament_size
+        self._elite_group_size = config.elite_group_size
         self._config = config
-        # TODO: refactor out to Mutator
         self._mutation_probability_dictionary = {self.__mutate_add_connection: config.add_connection_probability,
                                                  self.__mutate_add_node: config.add_node_probability,
                                                  self.__mutate_connection_weight: config.change_weight_probability}
         self._innovations_dictionary = {}
 
     def breed_population(self, population):
-        new_population_genomes = []
+        """Breeds and mutates population, returning the next generation"""
+        new_population_genomes = population.elite_group
         # breed pairs
         pairs_of_parents_to_breed = self.__generate_parents_pairs_to_breed(population)
         for genome1, genome2 in pairs_of_parents_to_breed:
@@ -39,24 +40,23 @@ class GenomesBreeder:
         # reset all genomes while keeping old representatives
         for species in population.species:
             species.reset_genomes()
-        #TODO: we pass population.speceis to the new population without assigning new representatives! that's not good
-        if self._reset_breeder:             # reset innovations list rather than creating a whole new breeder each time
+        if self._reset_breeder:         # reset innovations list rather than creating a whole new breeder each time
             self._innovations_dictionary = {}
-        return Population(self._config, new_population_genomes, population.species, self)
+        return Population(self._config, genomes=new_population_genomes, species=population.species)
 
     def __generate_parents_pairs_to_breed(self, population):
         species_list = population.species
-        new_species_distribution = self.__calculate_offspring_per_species(species_list)
+        new_species_distribution = self.__calculate_offspring_per_species(species_list, population)
         pairs_of_parents_to_breed = []
         # create new genomes from existing ones
         for species_index in range(len(species_list)):
             # repeat once for each genomes in the new species' distribution
             for _ in range(new_species_distribution[species_index]):
-                # choose parents    # TODO: choose using k-tournament, find in git
-                index1 = random.choice(len(species_list[species_index].genomes))
-                index2 = random.choice(len(species_list[species_index].genomes))
-                genome1 = species_list[species_index].genomes[index1].genome
-                genome2 = species_list[species_index].genomes[index2].genome
+                # choose parents in k-tournament
+                genomes = species_list[species_index].genomes
+                k = min(self._max_tournament_size, len(genomes))
+                genome1 = max(random.sample(genomes, k), key=lambda genome: genome.fitness)
+                genome2 = max(random.sample(genomes, k), key=lambda genome: genome.fitness)
                 pairs_of_parents_to_breed.append((genome1, genome2))
         return pairs_of_parents_to_breed
 
@@ -78,12 +78,11 @@ class GenomesBreeder:
         matching = set(connection_genes1.keys()).intersection(set(connection_genes2.keys()))
 
         offspring_connection_genes = {}
-        #TODO: disable genes with some probability if parent has it disabled......
         # matching genes - inherit one from a random parent
         for innovation_number in matching:
-            if random.choice([True, False]):
-                offspring_connection_genes[innovation_number] = copy.copy(connection_genes1[innovation_number])     # copied because mutations can change values
-            else:
+            if random.choice([True, False]):        # take parent1's weight
+                offspring_connection_genes[innovation_number] = copy.copy(connection_genes1[innovation_number])
+            else:                                   # take parent2's weight
                 offspring_connection_genes[innovation_number] = copy.copy(connection_genes2[innovation_number])
 
         # mismatched genes - inherit all from the fitter parent
@@ -101,13 +100,12 @@ class GenomesBreeder:
                                  if genome.node_genes[node_index].type not in ['BIAS', 'INPUT']]
         # Two edges with the same source and destination are not possible.
         possible_edges = set(itertools.product(possible_sources, possible_destinations)) -\
-                         set(map(lambda connection_gene: connection_gene.to_edge_tuple(), genome.connection_genes.values()))
+            set(map(lambda connection_gene: connection_gene.to_edge_tuple(), genome.connection_genes.values()))
         if not possible_edges:
             logging.debug("No possible edges. Possible sources: %s, possible destinations: %s, current edges: %s",
                           str(possible_sources), str(possible_destinations), str(genome.connection_genes.keys()))
         else:
             source, dest = random.choice(possible_edges)  # randomly choose one edge from the possible edges
-            # TODO: I assume that the new connection gene is always enabled after the mutation
             new_innovation = -1         # default value, sets new innovation by static innovation counter
             if (source, dest) in self._innovations_dictionary.keys():
                 new_innovation = self._innovations_dictionary[(source, dest)]       # innovation from previous mutations
@@ -118,7 +116,7 @@ class GenomesBreeder:
             # new_innovation can only be -1 if the connection was not added, due to it closing a cycle
             if new_innovation != -1:
                 self._innovations_dictionary[(source, dest)] = new_innovation
-
+            # the syntax above is a bit ugly but I think it works
 
     def __mutate_add_node(self, genome):
         """Takes an existing edge and splits it in the middle with a new node"""
@@ -127,20 +125,18 @@ class GenomesBreeder:
             logging.debug("add_note mutation failed: no connection genes to split")
         else:
             old_connection = random.choice(list(genome.connection_genes.values()))
-            old_source, old_dest = old_connection.to_edge_tuple()
-            #TODO: CHECK IF THIS INNOVATION ALREADY EXISTS IN POPULATION!!! (LIKE IN ADD CONNECTION)
-            new_node_index = encode_node(old_source, old_dest)
-            # the new connection leading into the new node from the old source has weight 1 according to the NEAT paper
-            new_connection_to_node = ConnectionGene(old_source, new_node_index, 1, True)
-            # the new connection leading out of the new node from to the old dest has
-            # the old connection's weight according to the NEAT paper
-            new_connection_from_node = ConnectionGene(new_node_index, old_dest, old_connection.weight, True)
+            old_source_index, old_dest_index = old_connection.to_edge_tuple()
+            new_node_index = encode_node(old_source_index, old_dest_index)
+
             old_connection.disable()
 
             # Big no-no to Ben for not using these handy-dandy functions earlier!
             genome.add_node_gene('HIDDEN', new_node_index)
-            genome.add_connection_gene(old_source, new_node_index, 1, True)
-            genome.add_connection_gene(new_node_index, old_dest, old_connection.weight, True)
+            # the new connection leading into the new node from the old source has weight 1 according to the NEAT paper
+            genome.add_connection_gene(old_source_index, new_node_index, 1, True)
+            # the new connection leading out of the new node from to the old dest has
+            # the old connection's weight according to the NEAT paper
+            genome.add_connection_gene(new_node_index, old_dest_index, old_connection.weight, True)
 
     def __mutate_connection_weight(self, genome):
         """Alters the weight of a connection"""
@@ -156,30 +152,28 @@ class GenomesBreeder:
         return genome.fitness / sum_of_sharing
 
     def __sharing_function(self, distance):
-        if distance >= self._distance_threshold:
+        if distance >= self._compatibility_threshold:
             return 0
         else:
             return 1
 
-    def __calculate_offspring_per_species(self, list_of_species):
+    def __calculate_offspring_per_species(self, list_of_species, population):
         """returns a list, entry [i] is the number of offsprings for species i in the following generation"""
-        #TODO: clean this ugly solution:
         species_total_adjusted_fitness = [0] * len(list_of_species)
         for species_index in range(len(list_of_species)):
             for genome in list_of_species:
-                species_total_adjusted_fitness[species_index] += self.__calculate_adjusted_fitness(genome)
+                species_total_adjusted_fitness[species_index] += self.__calculate_adjusted_fitness(genome, population)
 
         # species_adjusted_fitness[i] is the adjusted fitness of species i
-        population_total_adjusted_fitness = sum(species_total_adjusted_fitness)  # total adjusted fitness of entire population
+        population_total_adjusted_fitness = sum(species_total_adjusted_fitness)  # entire population's adjusted fitness
         # offspring number proportionate to relative fitness
-        new_species_distribution = [self._population_size * species_fitness / population_total_adjusted_fitness
-                                    for species_fitness in species_total_adjusted_fitness]
+        breeding_size = self._population_size - self._elite_group_size      # don't need to breed elites
+        new_species_distribution = (breeding_size / population_total_adjusted_fitness) * species_total_adjusted_fitness
         # the number of genomes in a species is an integer
         new_species_distribution = [int(x) for x in new_species_distribution]
-        size_delta = self._population_size - sum(new_species_distribution)
+        size_delta = breeding_size - sum(new_species_distribution)
         assert size_delta >= 0
         new_species_distribution[0] += size_delta
-        assert sum(new_species_distribution) == self._population_size
+        assert sum(new_species_distribution) == breeding_size
         return new_species_distribution
-
 
