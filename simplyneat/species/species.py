@@ -24,7 +24,7 @@ class Species:
         Useful for speciating a new generation of organisms according to old generation representatives, which were chosen at random"""
         self._representative = random.choice(self._genomes)
 
-    def add_genomes(self, genome):
+    def add_genome(self, genome):
         if not isinstance(genome, Genome):
             raise ValueError("add_genome argument should be an instance of %s, not %s", Genome.__class__, genome.__class__)
         self._genomes.append(genome)

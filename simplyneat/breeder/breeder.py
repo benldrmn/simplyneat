@@ -96,6 +96,7 @@ class Breeder:
 
     def __mutate_add_connection(self, genome):
         assert isinstance(genome, Genome)
+        #TODO: no need to check for cycles anymore (we support RNN)
         possible_sources = genome.node_genes.keys()
         # INPUT\BIAS neurons can't be a destination.
         possible_destinations = [node_index for node_index in genome.node_genes.keys()
@@ -119,7 +120,6 @@ class Breeder:
             # new_innovation can only be -1 if the connection was not added, due to it closing a cycle
             if new_innovation != -1:
                 self._innovations_dictionary[(source, dest)] = new_innovation
-
 
     def __mutate_add_node(self, genome):
         """Takes an existing edge and splits it in the middle with a new node"""
@@ -178,5 +178,3 @@ class Breeder:
         new_species_distribution[0] += size_delta
         assert sum(new_species_distribution) == breeding_size
         return new_species_distribution
-
-

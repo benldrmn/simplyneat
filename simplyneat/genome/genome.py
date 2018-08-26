@@ -43,7 +43,7 @@ class Genome:
         self._fitness = config.fitness_function(self._neural_net) #TODO: assuming for now that's the fitness_function's required api
 
     def __create_neural_network(self):
-        TheanoAgent(self.config, self)
+        return TheanoAgent(self.config, self)
 
     @property
     def node_genes(self):

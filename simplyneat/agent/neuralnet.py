@@ -38,6 +38,7 @@ class TheanoAgent:
                 for connection in node.incoming_connections:
                     function_output += connection_weights[connection] * node_to_theano_scalar[connection.source_node]
                 function_output = T.nnet.sigmoid(function_output) #TODO: change (configurable)
+            #TODO: utilize outputs to have one function per layer instead of one per node
             node_activation_func = theano.function(activation_function_inputs, function_output, on_unused_input='ignore')
             self._activation_functions[node] = node_activation_func
 

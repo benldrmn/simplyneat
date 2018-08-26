@@ -2,8 +2,8 @@ from simplyneat.breeder.breeder import Breeder
 from simplyneat.genome.genome import Genome
 import logging
 
-from simplyneat.population.population import Population
-from simplyneat.statistics import StatisticsTypes
+from simplyneat.population.population import Population, StatisticsTypes
+
 
 class Neat:
 
@@ -29,6 +29,12 @@ class Neat:
         logging.info("NEAT finished running, returning statistics dictionary")
 
     def run(self):
+        # TODO: keep track of best genome of all time (every gen get best genome and compare to current best of all time)
+        # TODO: pickle (BEN),
+        # TODO: log some stats on the run,
+        # TODO: optional: re-run for X more gen (if we decide we have more time)
+        # TODO: add to config time limit and finish after the first one finishes - either time limit or num_generations
+        # TODO: TESTS and EXAMPLES (look at neat-python github for examples)
         for i in range(self._number_of_generations):
             logging.info("Generation number %s" % (i+1))
             self.__step()
@@ -36,10 +42,10 @@ class Neat:
 
     def __step(self):
         """A single iteration of NEAT's algorithm, test the entire population and get the next generation"""
-        logging.info("Gathering statistics from previous generation")
-        self.__add_statistics()
         logging.info("Breeding new generation")
         self._population = self._breeder.breed_population(self._population)
+        logging.info("Gathering statistics of current generation")
+        self.__add_statistics()
 
     def __add_statistics(self):
         """Appends to each list of statistics according to how the generation performed. 
