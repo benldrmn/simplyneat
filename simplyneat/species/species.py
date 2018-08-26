@@ -8,8 +8,8 @@ class Species:
         self._genomes = list(genomes)  # initial genomes in the species
         if not self._genomes:
             raise ValueError("A species must be initialized with at least one genome")
-            self._representative = random.choice(self._genomes)
-            # new structural innovations of this generation of the species (refer to section 3.2 in the NEAT paper)
+        self._representative = random.choice(self._genomes)
+        # new structural innovations of this generation of the species (refer to section 3.2 in the NEAT paper)
 
     @property
     def genomes(self):

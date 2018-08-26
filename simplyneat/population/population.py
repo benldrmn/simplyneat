@@ -78,6 +78,7 @@ class Population:
     def get_statistic(self, statistic):
         """Returns a certain statistic which is kept by the population.
         Statistic is an enum of type StatisticsType (defined in neat.py). Make sure to handle all statistics."""
+        # TODO: don't raise exception -- it's too general
         if statistic not in StatisticsTypes:
             raise Exception("Statistic type unknown to population")
         if statistic == StatisticsTypes.MAX_FITNESS:
