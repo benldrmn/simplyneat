@@ -55,6 +55,9 @@ class TheanoAgent:
                     #TODO: relying on node index to be a 0 to #inputs -1 integer - not good
                     node_activation = inputs[node_gene.node_index]
                     self._activations[node_gene] = node_activation
+                elif node_gene.node_type == NodeType.BIAS:  # BIAS node activation is always 1.0
+                    node_activation = 1.0
+                    self._activations[node_gene] = 1.0
                 else:
                     #TODO: inefficient sorting each iteration below
                     node_activation = self._activation_functions[node_gene](*[activation for node, activation in sorted(self._activations.items(), key=lambda item: str(item[0]))])
