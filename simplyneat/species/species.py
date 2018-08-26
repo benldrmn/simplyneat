@@ -8,8 +8,8 @@ class Species:
         self._genomes = list(genomes)  # initial genomes in the species
         if not self._genomes:
             raise ValueError("A species must be initialized with at least one genome")
-            self._representative = random.choice(self._genomes)
-            # new structural innovations of this generation of the species (refer to section 3.2 in the NEAT paper)
+        self._representative = random.choice(self._genomes)
+        # new structural innovations of this generation of the species (refer to section 3.2 in the NEAT paper)
 
     @property
     def genomes(self):
@@ -24,7 +24,7 @@ class Species:
         Useful for speciating a new generation of organisms according to old generation representatives, which were chosen at random"""
         self._representative = random.choice(self._genomes)
 
-    def add_genomes(self, genome):
+    def add_genome(self, genome):
         if not isinstance(genome, Genome):
             raise ValueError("add_genome argument should be an instance of %s, not %s", Genome.__class__, genome.__class__)
         self._genomes.append(genome)

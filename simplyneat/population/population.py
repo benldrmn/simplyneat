@@ -1,8 +1,8 @@
 import logging
 import random
+from enum import Enum
 
 from simplyneat.genome.genome import compatibility_distance
-from simplyneat.statistics import StatisticsTypes
 from simplyneat.species.species import Species
 import numpy as np
 
@@ -46,6 +46,7 @@ class Population:
     @property
     def elite_group(self):
         """Returns a list of the best genomes which we'd like to keep for the next generation"""
+        #TODO: i think it returns a list of (key,val) tuples. also, i think we should return 0:self.size-1
         sorted_genomes = sorted(self.genomes, key=lambda genome: genome.fitness, reverse=True)
         return sorted_genomes[0:self._elite_group_size]
 
@@ -63,7 +64,7 @@ class Population:
             representative = self._list_of_species[index].representative
             # try to assign genome to species with given index
             if compatibility_distance(genome.genome, representative.genome) < self._compatibility_threshold:
-                self._list_of_species[index].add_genomes(genome)
+                self._list_of_species[index].add_genome(genome)
                 logging.info("Assigned genome to species: " + str(genome) + str(index))
                 return index
         # this is a new species!
@@ -78,6 +79,7 @@ class Population:
     def get_statistic(self, statistic):
         """Returns a certain statistic which is kept by the population.
         Statistic is an enum of type StatisticsType (defined in neat.py). Make sure to handle all statistics."""
+        # TODO: don't raise exception -- it's too general
         if statistic not in StatisticsTypes:
             raise Exception("Statistic type unknown to population")
         if statistic == StatisticsTypes.MAX_FITNESS:
@@ -112,6 +114,7 @@ class Population:
 
     @property
     def best_genome(self):
+        #TODO: won't it return the highest fitness (not genome)? same for worst below
         return max(self.genomes, key=lambda genome: genome.fitness)
 
     @property
@@ -119,3 +122,10 @@ class Population:
         return min(self.genomes, key=lambda genome: genome.fitness)
 
 
+class StatisticsTypes(Enum):
+    MAX_FITNESS = 'MAX_FITNESS'
+    MIN_FITNESS = 'MIN_FITNESS'
+    AVERAGE_FITNESS = 'AVERAGE_FITNESS'
+    NUM_SPECIES = 'NUM_SPECIES'
+    BEST_GENOME = 'BEST_GENOME'
+    WORST_GENOME = 'WORST_GENOME'
