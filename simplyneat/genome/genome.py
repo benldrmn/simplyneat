@@ -5,10 +5,12 @@ import numpy as np
 import copy
 from simplyneat.genome.genes.connection_gene import ConnectionGene
 from simplyneat.genome.genes.node_gene import NodeGene, NodeType
-from simplyneat.agent.neuralnet import TheanoAgent
+# from simplyneat.agent.neuralnet import TheanoAgent        # TODO: remove after testing
 
 
 class Genome:
+
+    _current_genome_number = 0
 
     #todo: consider adding node_genes to the ctor so we can define each nodes activation function
     #todo: that way when we mutate a genome, we can get the nodes list and alter one nodes activation
@@ -21,6 +23,9 @@ class Genome:
         self._weight_mutation_distribution = config.weight_mutation_distribution            # for mutation of changing weights
         self._connection_weight_mutation_distribution = config.connection_weight_mutation_distribution      # for mutation of connection creation
         self.config = config                            # TODO: (property?)left config public on pourpse, for crossover TODO: what?
+
+        self._genome_number = Genome._current_genome_number     # Liron: added for debugging, might wanna keep it anyway
+        Genome._current_genome_number += 1
 
         if self._number_of_input_nodes <= 0:
             raise ValueError('number of input nodes must be greater than 0')
@@ -39,11 +44,12 @@ class Genome:
 
         self.__init_node_genes()
 
-        self._neural_net = self.__create_neural_network()
-        self._fitness = config.fitness_function(self._neural_net) #TODO: assuming for now that's the fitness_function's required api
+        # self._neural_net = self.__create_neural_network()     # TODO: remove comment after done debugging
+        # self._fitness = config.fitness_function(self._neural_net) #TODO: assuming for now that's the fitness_function's required api
+        self._fitness = 1                                       # TODO: remove comment after done debugging
 
-    def __create_neural_network(self):
-        return TheanoAgent(self.config, self)
+    # def __create_neural_network(self):                        # TODO: remove comment after done debugging
+    #     return TheanoAgent(self.config, self)                 # TODO: remove comment after done debugging
 
     @property
     def node_genes(self):
@@ -63,6 +69,10 @@ class Genome:
     @property
     def fitness(self):
         return self._fitness
+
+    @property
+    def genome_number(self):
+        return self._genome_number
 
     def __init_node_genes(self):
         """Initializes node for the entire genome, i.e. adds SENSOR, OUTPUT, BIAS nodes which are present in all
@@ -112,17 +122,17 @@ class Genome:
 
     def add_node_gene(self, node_type, node_index):
         """Adds a single node gene to the genome"""
-        #TODO: don't assert in public funcs
         #TODO: node index is sometimes tuple and sometimes int (when input\output\bias)
-        assert node_index not in self._node_genes.keys()
+        if node_index in self._node_genes.keys():
+            raise ValueError("Node index already in genome")
         new_node_gene = NodeGene(node_type, node_index)
         self._node_genes[node_index] = new_node_gene
         logging.info("New node gene added: " + str(new_node_gene))
         return new_node_gene
 
     def delete_node_gene(self, node_index):
-        #TODO: don't assert in public funcs
-        assert node_index in self._node_genes
+        if node_index not in self._node_genes.keys():
+            raise ValueError("Node index not in genome")
         # we only delete nodes if they became isolated after a delete_connection mutation.
         # note that all nodes start as isolated nodes after the __add_node mutation.
         assert self._node_genes[node_index].is_isolated()
@@ -131,35 +141,32 @@ class Genome:
         del self._node_genes[node_index]
 
     def add_connection_gene(self, source, dest, weight, enabled=True, innovation=None):
-        """Adds a connection gene, if the connection does not create a cycle. 
+        """Adds a connection gene.
         By default innovation is None, which means we set the innovation for the new gene by looking at the static
         innovation count, otherwise the new gene's innovation number is innovation. 
-        Return the new innovation number if the connection was added, otherwise returns -1"""
-        #TODO: don't assert in public funcs
-        assert source in self._node_genes.values()
-        assert dest in self._node_genes.values()
-
+        Return the new innovation number."""
+        print([dest])
+        if not isinstance(dest, NodeGene):
+            print("add_connection_gene found that dest ain't a NodeGene")
+        if source not in self._node_genes.values():
+            raise ValueError("Source node not defined for the genome!")
+        if dest not in self._node_genes.values():           # TODO: error - thinks dest is a tuple
+            raise ValueError("Destination node not defined for the genome!")
         new_connection_gene = ConnectionGene(source, dest, weight, enabled, innovation)
 
-        assert not cycle_exists(self.node_genes)
         self._connection_genes[new_connection_gene.innovation] = new_connection_gene
-        self._node_genes[source.node_index].add_outgoing_connection(new_connection_gene)
-        self._node_genes[dest.node_index].add_incoming_connection(new_connection_gene)
+        source.add_outgoing_connection(new_connection_gene)
+        dest.add_incoming_connection(new_connection_gene)
 
-        if cycle_exists(self._node_genes):      # if there's a cycle revert the process
-            del self._connection_genes[new_connection_gene.innovation]
-            self._node_genes[source.node_index].delete_outgoing_connection(new_connection_gene)
-            self._node_genes[dest.node_index].delete_incoming_connection(new_connection_gene)
-            logging.info("Connection gene was not added due to loop: " + str(new_connection_gene))
-            return -1
-        else:
-            logging.info("New connection gene added: " + str(new_connection_gene))
-            return new_connection_gene.innovation
+        logging.info("New connection gene added: " + str(new_connection_gene))
+        return new_connection_gene.innovation
 
     def __str__(self):
-        return 'Node genes: %s, Connection genes: %s' % (self._node_genes, self._connection_genes)
+        return '[Genome number: %s \nNode genes: %s \nConnection genes: %s]' \
+               % (self._genome_number, self._node_genes, self._connection_genes)
 
-    __repr__ = __str__
+    def __repr__(self):
+        return 'Genome number: %s' % self._genome_number
 
 
 def compatibility_distance(genome1, genome2):
@@ -169,27 +176,34 @@ def compatibility_distance(genome1, genome2):
                      % (str(genome1), str(genome2)))
         return 0.0
     # create a new dict with all of the genomes' genes
-    connection_genes1 = genome1.connection_genes()
-    connection_genes2 = genome2.connection_genes()
-    # N is as defined in the NEAT paper (number of genes in the larger genome
-    N = max(len(connection_genes1), len(connection_genes2))
+    connection_genes1 = genome1.connection_genes
+    connection_genes2 = genome2.connection_genes
+    # N is as defined in the NEAT paper (number of genes in the larger genome)
+    N = max(genome1.size, genome2.size)
 
     disjoint, excess = calculate_mismatching_genes(connection_genes1, connection_genes2)
-    matching_connection_genes_innovations = set(genome1.connection_genes().keys()).intersection(set(genome2.connection_genes().keys()))
+    matching_connection_genes_innovations = set(genome1.connection_genes.keys()).intersection(
+        set(genome2.connection_genes.keys()))
 
-    weight_differences = [abs(connection_genes1[innovation_num].weight - connection_genes2[innovation_num].weight)
-                          for innovation_num in matching_connection_genes_innovations]
-
-    average_weight_difference = np.mean(weight_differences)
+    if matching_connection_genes_innovations:
+        weight_differences = [abs(connection_genes1[innovation_num].weight - connection_genes2[innovation_num].weight)
+                              for innovation_num in matching_connection_genes_innovations]
+        average_weight_difference = np.mean(weight_differences)
+    else:
+        average_weight_difference = 0
 
     # TODO: maybe find prettier solution for coefficients
     return genome1.excess_coefficient*len(excess)/N + \
-        genome1.disjoint_coefficient*len(disjoint)/N + \
-        genome1.weight_difference_coefficient*average_weight_difference
+           genome1.disjoint_coefficient*len(disjoint)/N + \
+           genome1.weight_difference_coefficient*average_weight_difference
 
 
 def calculate_mismatching_genes(connection_genes1, connection_genes2):
     """Returns a pair of lists containing innovation numbers of disjoint and excess connection genes"""
+    if not connection_genes1.keys() or not connection_genes2.keys():
+        # if one of the dictionaries is empty then everything in the other is excess!
+        return [], list(set(connection_genes1.keys()).symmetric_difference(set(connection_genes2.keys())))
+
     # Max innovation is of connection genes. Node genes don't hold an innovation number.
     max_innovation_genome1 = max(connection_genes1.keys())
     max_innovation_genome2 = max(connection_genes2.keys())
@@ -210,29 +224,3 @@ def calculate_mismatching_genes(connection_genes1, connection_genes2):
                 excess.append(innovation_num)
     return disjoint, excess
 
-#TODO: refactor out to graph utils module or something like that
-# Took this from https://algocoding.wordpress.com/2015/04/02/detecting-cycles-in-a-directed-graph-with-dfs-python/
-def cycle_exists(nodes):
-    """Returns true iff the connections create a cycle"""
-    color = {node: 'not visited' for node in nodes}
-    found_cycle = [False]           # set to array to pass by reference, not by value
-
-    for node in nodes:
-        if color[node] == 'not visited':
-            dfs_visit(nodes, color, found_cycle)
-        if found_cycle[0]:
-            break
-    return found_cycle[0]
-
-
-def dfs_visit(nodes, node, color, found_cycle):
-    if found_cycle[0]:
-        return
-    color[node] = 'visiting'
-    for neighbor in node.neighbors_to:
-        if color[neighbor] == 'visiting':
-            found_cycle[0] = True
-            return
-        if color[neighbor] == 'not visited':
-            dfs_visit(nodes, neighbor, color, found_cycle)
-    color[node] = 'previously visited'
