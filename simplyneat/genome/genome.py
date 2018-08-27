@@ -99,6 +99,7 @@ class Genome:
         Only used in the genome's initialization phase. Otherwise use __add_connection_gene or __add_node_gene."""
         assert isinstance(self._connection_genes, dict)
         for connection_gene in self._connection_genes.values():
+            #TODO: The implementation of to_edge_tuple changed for some reason and now it returns a tuple of nodes instead of a tuple of node_indexes, but the code below wasn't changed
             source_index, dest_index = connection_gene.to_edge_tuple()
             # if node doesn't exist, it has to be a hidden node since all of the other types were created and
             # add to the self._node_genes dict in init_node_genes

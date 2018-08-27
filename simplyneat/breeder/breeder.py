@@ -101,6 +101,7 @@ class Breeder:
         possible_destinations = [node_index for node_index in genome.node_genes.keys()
                                  if genome.node_genes[node_index].node_type not in [NodeType.BIAS, NodeType.INPUT]]
         # Two edges with the same source and destination are not possible.
+        # TODO: The implementation of to_edge_tuple changed for some reason and now it returns a tuple of nodes instead of a tuple of node_indexes, but the code below wasn't changed
         possible_edges = list(set(itertools.product(possible_sources, possible_destinations)) -\
             set(map(lambda connection_gene: connection_gene.to_edge_tuple(), genome.connection_genes.values())))
         if not possible_edges:
