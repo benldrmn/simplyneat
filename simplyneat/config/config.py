@@ -13,7 +13,7 @@ class Config:
         'number_of_output_nodes': None,
 
         # have default values, don't need to be set
-        'number_of_generations': 1000,
+        'default_number_of_generations': 1000,
         'population_size': 1000,
         'elite_group_size': 50,                                         # number of members who always pass to next generation
 

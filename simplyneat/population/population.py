@@ -46,9 +46,12 @@ class Population:
     @property
     def elite_group(self):
         """Returns a list of the best genomes which we'd like to keep for the next generation"""
-        #TODO: i think it returns a list of (key,val) tuples. also, i think we should return 0:self.size-1
         sorted_genomes = sorted(self.genomes, key=lambda genome: genome.fitness, reverse=True)
         return sorted_genomes[0:self._elite_group_size]
+
+    @property
+    def size(self):
+        return self._size
 
     def __add_genome(self, genome):
         assert genome not in self._genomes
@@ -63,12 +66,12 @@ class Population:
         for index in indexes:
             representative = self._list_of_species[index].representative
             # try to assign genome to species with given index
-            if compatibility_distance(genome.genome, representative.genome) < self._compatibility_threshold:
+            if compatibility_distance(genome, representative) < self._compatibility_threshold:
                 self._list_of_species[index].add_genome(genome)
                 logging.info("Assigned genome to species: " + str(genome) + str(index))
                 return index
         # this is a new species!
-        self._list_of_species.append(Species(genome))
+        self._list_of_species.append(Species([genome]))
         return len(self._list_of_species)-1  # the indexes are 0-based while len obviously isn't
 
     def __speciate_population(self):
@@ -78,10 +81,9 @@ class Population:
 
     def get_statistic(self, statistic):
         """Returns a certain statistic which is kept by the population.
-        Statistic is an enum of type StatisticsType (defined in neat.py). Make sure to handle all statistics."""
-        # TODO: don't raise exception -- it's too general
+        Statistic is an enum of type StatisticsType. Make sure to handle all statistics."""
         if statistic not in StatisticsTypes:
-            raise Exception("Statistic type unknown to population")
+            raise ValueError("Statistic type unknown to population")
         if statistic == StatisticsTypes.MAX_FITNESS:
             return self.max_fitness
         if statistic == StatisticsTypes.MIN_FITNESS:
@@ -94,7 +96,9 @@ class Population:
             return self.best_genome
         if statistic == StatisticsTypes.WORST_GENOME:
             return self.worst_genome
-        raise Exception("Statistic type unhandled in population")
+        if statistic == StatisticsTypes.BIGGEST_SPECIES:
+            return self.biggest_species
+        raise ValueError("Statistic type unhandled in population")
 
     @property
     def max_fitness(self):
@@ -114,12 +118,21 @@ class Population:
 
     @property
     def best_genome(self):
-        #TODO: won't it return the highest fitness (not genome)? same for worst below
         return max(self.genomes, key=lambda genome: genome.fitness)
 
     @property
     def worst_genome(self):
         return min(self.genomes, key=lambda genome: genome.fitness)
+
+    @property
+    def biggest_species(self):
+        return max(self.species, key=lambda species: len(species.genomes)).species_number
+
+    def __str__(self):
+        return '[Population with %s species and %s genomes: \nSpecies: %s\n]' \
+               % (len(self.species), len(self.genomes), self.species)
+
+    __repr__ = __str__
 
 
 class StatisticsTypes(Enum):
@@ -129,3 +142,4 @@ class StatisticsTypes(Enum):
     NUM_SPECIES = 'NUM_SPECIES'
     BEST_GENOME = 'BEST_GENOME'
     WORST_GENOME = 'WORST_GENOME'
+    BIGGEST_SPECIES = 'BIGGEST_SPECIES'
