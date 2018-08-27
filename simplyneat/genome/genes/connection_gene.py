@@ -44,7 +44,7 @@ class ConnectionGene:
         self._weight = weight
 
     def to_edge_tuple(self):
-        return self._source_node.node_index, self._dest_node.node_index
+        return self._source_node, self._dest_node
 
     def enable(self):
         return self.__change_enabled_flag(True)
@@ -63,13 +63,13 @@ class ConnectionGene:
         return prev_flag != new_flag
 
     def __str__(self):
-        return "(Connection source: %s, destination: %s, weight: %d, enabled: %s, innovation: %s)" \
-               % (self._source_node, self._dest_node, self.weight, str(self._enabled), str(self._innovation))
+        return "[(Connection source: %s, destination: %s, weight: %s, enabled: %s, innovation: %s)]" \
+               % (self._source_node, self._dest_node, self._weight, self._enabled, str(self._innovation))
         # return "Connection source: %s, destination: %s, weight: %d, innovation number: %d, enabled: %s" %\
         #         (self._source_node, self._dest_node, self.weight, self._innovation, str(self._enabled))
 
     def __key(self):
-        return (self._source_node, self._dest_node, self._weight, self._enabled, self._innovation)
+        return self._source_node, self._dest_node, self._weight, self._enabled, self._innovation
 
     def __eq__(self, y):
         return self.__key() == y.__key()

@@ -5,7 +5,8 @@ from enum import Enum
 class NodeGene:
 
     def __init__(self, node_type, node_index):
-        #TODO: make sure that node_type is a valid enum member
+        if node_type not in NodeType:
+            raise ValueError("Node type not recognized")
         # SENSOR, OUTPUT, HIDDEN or BIAS
         self._type = node_type
         # a number of internal book-keeping, as in the NEAT paper's illustrations
@@ -55,18 +56,18 @@ class NodeGene:
         return False
 
     def __str__(self):
-        return "(Node type: %s, index: %s)" % (self.node_type, self._node_index)
+        return "[(Node type: %s, index: %s)]" % (self.node_type, self._node_index)
         # return "Node type: %s, index: %d," \
         #        " has connections from: %s," \
         #        " has connections to: %s" %\
         #        (self.type, self._node_index, str(self._has_connections_from), str(self._has_connections_to))
 
     def __key(self):
-        #TODO: also connection sets?
-        return (self._type, self._node_index)
+        return self._type, self._node_index
 
     def __eq__(self, y):
-        return self.__key() == y.__key()
+
+        return self.__key() == y.__key()            # TODO: simple equality fucks up when one is int and the other a tuple
 
     def __hash__(self):
         return hash(self.__key())

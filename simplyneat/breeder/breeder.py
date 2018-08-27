@@ -23,7 +23,7 @@ class Breeder:
         self._elite_group_size = config.elite_group_size
         self._config = config
         self._mutation_probability_dictionary = {self.__mutate_add_connection: config.add_connection_probability,
-                                                 self.__mutate_add_node: config.add_node_probability,
+                                                 self.mutate_add_node: config.add_node_probability,
                                                  self.__mutate_connection_weight: config.change_weight_probability}
         self._innovations_dictionary = {}
 
@@ -96,60 +96,65 @@ class Breeder:
 
     def __mutate_add_connection(self, genome):
         assert isinstance(genome, Genome)
-        #TODO: no need to check for cycles anymore (we support RNN)
         possible_sources = genome.node_genes.keys()
         # INPUT\BIAS neurons can't be a destination.
         possible_destinations = [node_index for node_index in genome.node_genes.keys()
-                                 if genome.node_genes[node_index].type not in [NodeType.BIAS, NodeType.INPUT]]
+                                 if genome.node_genes[node_index].node_type not in [NodeType.BIAS, NodeType.INPUT]]
         # Two edges with the same source and destination are not possible.
-        possible_edges = set(itertools.product(possible_sources, possible_destinations)) -\
-            set(map(lambda connection_gene: connection_gene.to_edge_tuple(), genome.connection_genes.values()))
+        possible_edges = list(set(itertools.product(possible_sources, possible_destinations)) -\
+            set(map(lambda connection_gene: connection_gene.to_edge_tuple(), genome.connection_genes.values())))
         if not possible_edges:
             logging.debug("No possible edges. Possible sources: %s, possible destinations: %s, current edges: %s",
                           str(possible_sources), str(possible_destinations), str(genome.connection_genes.keys()))
         else:
             source_index, dest_index = random.choice(possible_edges)  # randomly choose one edge from the possible edges
             source, dest = genome.node_genes[source_index], genome.node_genes[dest_index]
-            new_innovation = -1         # default value, sets new innovation by static innovation counter
+            new_innovation = None         # default value, sets new innovation by static innovation counter
             if (source, dest) in self._innovations_dictionary.keys():
                 new_innovation = self._innovations_dictionary[(source, dest)]       # innovation from previous mutations
-            new_innovation = genome.add_connection_gene(source, dest, self._connection_weight_mutation_distribution, True, new_innovation)
-            # if new_innovation was -1 then we get the new innovation number from static innovation counter
-            # otherwise this changes nothing since we assign the value we took from the dictionary in the first place
+            new_innovation = genome.add_connection_gene(source, dest, self._connection_weight_mutation_distribution(),
+                                                        True, new_innovation)
 
-            # new_innovation can only be -1 if the connection was not added, due to it closing a cycle
-            if new_innovation != -1:
-                self._innovations_dictionary[(source, dest)] = new_innovation
+            self._innovations_dictionary[(source, dest)] = new_innovation
 
-    def __mutate_add_node(self, genome):
+    def mutate_add_node(self, genome):      # TODO: made this public for the test
         """Takes an existing edge and splits it in the middle with a new node"""
         assert isinstance(genome, Genome)
         if not genome.connection_genes:
             logging.debug("add_note mutation failed: no connection genes to split")
         else:
-            old_connection = random.choice(list(genome.connection_genes.values()))
-            old_source_index, old_dest_index = old_connection.to_edge_tuple()
-            new_node_index = encode_node(old_source_index, old_dest_index)
+            enabled_connections = list(genome.connection_genes.values())
+            enabled_connections = [connection for connection in enabled_connections
+                                   if connection.is_enabled()]
+            old_connection = random.choice(enabled_connections)
+            old_source, old_dest = old_connection.to_edge_tuple()
+            new_node_index = encode_node(old_source.node_index, old_dest.node_index)
 
             old_connection.disable()
 
-            genome.add_node_gene(NodeType.HIDDEN, new_node_index)
+            new_node = genome.add_node_gene(NodeType.HIDDEN, new_node_index)
+            if not isinstance(new_node, NodeGene):
+                print("mutate_add_node found that new_node ain't a NodeGene")
             # the new connection leading into the new node from the old source has weight 1 according to the NEAT paper
-            genome.add_connection_gene(old_source_index, new_node_index, 1, True)
+            genome.add_connection_gene(old_source, new_node, 1, True)
             # the new connection leading out of the new node from to the old dest has
             # the old connection's weight according to the NEAT paper
-            genome.add_connection_gene(new_node_index, old_dest_index, old_connection.weight, True)
+            genome.add_connection_gene(new_node, old_dest, old_connection.weight, True)
 
     def __mutate_connection_weight(self, genome):
         """Alters the weight of a connection"""
-        connection_gene = random.choice(genome.connection_genes.values())
-        connection_gene.weight += self._weight_mutation_distribution()
-        # TODO: read 4.1 better to understand how this works
+        if not genome.connection_genes:
+            logging.debug("add_note mutation failed: no connection genes to split")
+        else:
+            # apparently 'dict_values' object does not support indexing
+            connection_gene = random.choice(list(genome.connection_genes.values()))
+            connection_gene.weight += self._weight_mutation_distribution()
+            # TODO: read 4.1 better to understand how this works
 
     def __calculate_adjusted_fitness(self, genome, population):
         """Calculates the adjusted fitness of a single genome"""
         # at least 1 since the sharing of an genome with itself is 1
-        sum_of_sharing = sum([self.__sharing_function(compatibility_distance(genome.genome, other_genome.genome))
+        sum_of_sharing = sum([self.__sharing_function(compatibility_distance(genome, other_genome))
                               for other_genome in population.genomes])
         return genome.fitness / sum_of_sharing
 
@@ -163,14 +168,16 @@ class Breeder:
         """returns a list, entry [i] is the number of offsprings for species i in the following generation"""
         species_total_adjusted_fitness = [0] * len(list_of_species)
         for species_index in range(len(list_of_species)):
-            for genome in list_of_species:
+            for genome in list_of_species[species_index].genomes:
                 species_total_adjusted_fitness[species_index] += self.__calculate_adjusted_fitness(genome, population)
 
         # species_adjusted_fitness[i] is the adjusted fitness of species i
         population_total_adjusted_fitness = sum(species_total_adjusted_fitness)  # entire population's adjusted fitness
         # offspring number proportionate to relative fitness
-        breeding_size = self._population_size - self._elite_group_size      # don't need to breed elites
-        new_species_distribution = (breeding_size / population_total_adjusted_fitness) * species_total_adjusted_fitness
+        delta = max(0, self._elite_group_size - len(population.genomes))        # in case elite_size > population_size
+        breeding_size = self._population_size - self._elite_group_size + delta  # don't need to breed elites
+        new_species_distribution = [species_adjusted_fitness * breeding_size / population_total_adjusted_fitness
+                                    for species_adjusted_fitness in species_total_adjusted_fitness]
         # the number of genomes in a species is an integer
         new_species_distribution = [int(x) for x in new_species_distribution]
         size_delta = breeding_size - sum(new_species_distribution)
