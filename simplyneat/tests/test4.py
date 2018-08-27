@@ -9,5 +9,5 @@ if __name__ == '__main__':
     config = Config({'fitness_function': lambda x: 0, 'number_of_input_nodes': 5, 'number_of_output_nodes': 3,
                     'compatibility_threshold': 6})
     neat = Neat(config)
-    statistics = neat.run(3)
-    print(statistics[StatisticsTypes.BIGGEST_SPECIES])
+    statistics = neat.run(20)
+    print(statistics[StatisticsTypes.SPECIES_SIZE_HISTOGRAM])

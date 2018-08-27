@@ -99,8 +99,8 @@ class Genome:
         Only used in the genome's initialization phase. Otherwise use __add_connection_gene or __add_node_gene."""
         assert isinstance(self._connection_genes, dict)
         for connection_gene in self._connection_genes.values():
-            #TODO: The implementation of to_edge_tuple changed for some reason and now it returns a tuple of nodes instead of a tuple of node_indexes, but the code below wasn't changed
-            source_index, dest_index = connection_gene.to_edge_tuple()
+            source_index = connection_gene.source_node.node_index
+            dest_index = connection_gene.destination_node.node_index
             # if node doesn't exist, it has to be a hidden node since all of the other types were created and
             # add to the self._node_genes dict in init_node_genes
             if source_index not in self._node_genes.keys():
@@ -126,7 +126,7 @@ class Genome:
         """Adds a single node gene to the genome"""
         #TODO: node index is sometimes tuple and sometimes int (when input\output\bias)
         if node_index in self._node_genes.keys():
-            raise ValueError("Node index already in genome")
+            raise ValueError("Node index %s already in genome" % node_index)
         new_node_gene = NodeGene(node_type, node_index)
         self._node_genes[node_index] = new_node_gene
         logging.info("New node gene added: " + str(new_node_gene))
@@ -147,9 +147,6 @@ class Genome:
         By default innovation is None, which means we set the innovation for the new gene by looking at the static
         innovation count, otherwise the new gene's innovation number is innovation. 
         Return the new innovation number."""
-        print([dest])
-        if not isinstance(dest, NodeGene):
-            print("add_connection_gene found that dest ain't a NodeGene")
         if source not in self._node_genes.values():
             raise ValueError("Source node not defined for the genome!")
         if dest not in self._node_genes.values():           # TODO: error - thinks dest is a tuple

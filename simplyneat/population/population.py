@@ -98,6 +98,8 @@ class Population:
             return self.worst_genome
         if statistic == StatisticsTypes.BIGGEST_SPECIES:
             return self.biggest_species
+        if statistic == StatisticsTypes.SPECIES_SIZE_HISTOGRAM:
+            return self.species_size_histogram
         raise ValueError("Statistic type unhandled in population")
 
     @property
@@ -128,6 +130,10 @@ class Population:
     def biggest_species(self):
         return max(self.species, key=lambda species: len(species.genomes)).species_number
 
+    @property
+    def species_size_histogram(self):
+        return {species.species_number: len(species.genomes) for species in self._list_of_species}
+
     def __str__(self):
         return '[Population with %s species and %s genomes: \nSpecies: %s\n]' \
                % (len(self.species), len(self.genomes), self.species)
@@ -143,3 +149,4 @@ class StatisticsTypes(Enum):
     BEST_GENOME = 'BEST_GENOME'
     WORST_GENOME = 'WORST_GENOME'
     BIGGEST_SPECIES = 'BIGGEST_SPECIES'
+    SPECIES_SIZE_HISTOGRAM = 'SPECIES_SIZE_HISTOGRGAM'
