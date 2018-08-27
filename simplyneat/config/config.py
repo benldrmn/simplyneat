@@ -26,6 +26,7 @@ class Config:
         'add_connection_probability': 0.3,                              # probability of add_connection mutation occurring      # TODO: think of default value
         'add_node_probability': 0.3,                                    # probability of add_node mutation occurring            # TODO: think of default value
         'change_weight_probability': 0.8,                               # probability of change_weight mutation occurring       # TODO: think of default value
+        'reenable_connection_probability': 0.2,                         # probability of re-enable mutation occuring            # TODO: think of default value
         'max_tournament_size': 50,
         # probability of the chance that an inherited connection is disabled if it's disabled in either parent # TODO: think of a default value
         'inherit_disabled_connection_probability': 0.2,

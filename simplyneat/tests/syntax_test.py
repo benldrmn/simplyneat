@@ -1,9 +1,2 @@
-import numpy as np
-
-
-x = 5
-y = (3,1)
-if x == y:
-    print("YES")
-else:
-    print("NO")
+x = (1, (2,3), (4,(5,(6,(7)))))
+print(x)

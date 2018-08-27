@@ -43,10 +43,6 @@ class ConnectionGene:
     def weight(self, weight):
         self._weight = weight
 
-    #TODO: maybe remove this function. it's just confusing, we have the properties _source_node\destination_node
-    def to_edge_tuple(self):
-        return self._source_node, self._dest_node
-
     def enable(self):
         return self.__change_enabled_flag(True)
 
