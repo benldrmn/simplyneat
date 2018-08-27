@@ -14,6 +14,7 @@ class Genome:
 
     #todo: consider adding node_genes to the ctor so we can define each nodes activation function
     #todo: that way when we mutate a genome, we can get the nodes list and alter one nodes activation
+    #TODO: Inherit also the nodes and thus save creating new nodes all the time - i.e. inheriting connection (a,b) also inherits nodes a and b
     def __init__(self, config, connection_genes=None):
         # Constants
         self._number_of_input_nodes = config.number_of_input_nodes

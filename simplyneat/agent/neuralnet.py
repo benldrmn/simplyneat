@@ -48,6 +48,7 @@ class TheanoAgent:
 
     def __forward_pass(self, inputs):
         # from layer 0 (inputs) onwards
+        #TODO: it's a waste to sort the layer_to_node_genes_dict keys every iteration
         for layer_num in sorted(self._layer_to_node_genes_dict.keys()):
             current_layer_new_activations = {}
             for node_gene in self._layer_to_node_genes_dict[layer_num]:
@@ -55,7 +56,7 @@ class TheanoAgent:
                     #TODO: relying on node index to be a 0 to #inputs -1 integer - not good
                     node_activation = inputs[node_gene.node_index]
                     self._activations[node_gene] = node_activation
-                elif node_gene.node_type == NodeType.BIAS:
+                elif node_gene.node_type == NodeType.BIAS:  # BIAS node activation is always 1.0
                     node_activation = 1.0
                     self._activations[node_gene] = 1.0
                 else:

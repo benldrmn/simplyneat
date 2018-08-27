@@ -3,7 +3,8 @@ import logging
 
 class ConnectionGene:
 
-    _current_innovation_number = 0 #TODO: not thread safe
+    #TODO: https://stackoverflow.com/questions/2080660/python-multiprocessing-and-a-shared-counter, https://eli.thegreenplace.net/2012/01/04/shared-counter-with-pythons-multiprocessing
+    _current_innovation_number = 0
 
     def __init__(self, source_node, destination_node, weight, enabled_flag=True, innovation=None):
         self._source_node = source_node

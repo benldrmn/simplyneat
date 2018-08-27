@@ -16,7 +16,6 @@ class Species:
         Species._current_species_number += 1
 
         self._representative = random.choice(self._genomes)
-        # new structural innovations of this generation of the species (refer to section 3.2 in the NEAT paper)
 
     @property
     def genomes(self):
