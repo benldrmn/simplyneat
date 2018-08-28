@@ -8,6 +8,8 @@ from simplyneat.population.population import Population, StatisticsTypes
 class Neat:
 
     def __init__(self, config):
+        if config.verbose:
+            logging.getLogger().setLevel(logging.INFO)
         logging.info("Initializing NEAT environment:")
         self._config = config
         logging.info("✔ Config set")
@@ -42,10 +44,13 @@ class Neat:
 
     def __step(self):
         """A single iteration of NEAT's algorithm, test the entire population and get the next generation"""
-        logging.info("Breeding new generation")
-        self._population = self._breeder.breed_population(self._population)
         logging.info("Gathering statistics of current generation")
         self.__add_statistics()
+        logging.info("Max fitness: %s" % str(self._statistics[StatisticsTypes.MAX_FITNESS][-1]))
+        logging.info("Average fitness: %s" % str(self._statistics[StatisticsTypes.AVERAGE_FITNESS][-1]))
+        logging.info("Breeding new generation")
+        self._population = self._breeder.breed_population(self._population)
+
 
     def __add_statistics(self):
         """Appends to each list of statistics according to how the generation performed. 

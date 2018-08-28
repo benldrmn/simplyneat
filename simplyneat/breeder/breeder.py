@@ -3,8 +3,7 @@ import copy
 import logging
 import itertools
 
-from simplyneat.genome.genes.connection_gene import ConnectionGene
-from simplyneat.genome.genes.node_gene import NodeGene, encode_node, NodeType
+from simplyneat.genome.genes.node_gene import NodeType
 from simplyneat.genome.genes.node_gene import encode_node
 from simplyneat.genome.genome import calculate_mismatching_genes, Genome, compatibility_distance
 from simplyneat.population.population import Population
@@ -21,7 +20,6 @@ class Breeder:
         self._reset_breeder = config.reset_breeder
         self._max_tournament_size = config.max_tournament_size
         self._elite_group_size = config.elite_group_size
-        self._previously_split_connections = []          # list of connection gene which have already been split
         self._config = config
         self._mutation_probability_dictionary = {self.__mutate_add_connection: config.add_connection_probability,
                                                  self.mutate_add_node: config.add_node_probability,
@@ -130,17 +128,23 @@ class Breeder:
         else:
             #
             splittable_connections = list(genome.connection_genes.values())
+            if not splittable_connections:
+                logging.debug("add_note mutation failed: no connections to split")
+                return
             splittable_connections = [connection for connection in splittable_connections
-                                      if connection.innovation not in self._previously_split_connections]
+                                      if connection.innovation not in genome.previously_split_connections]
             if not splittable_connections:
                 logging.debug("add_note mutation failed: all connections were already split")
                 return
-            old_connection = random.choice(splittable_connections)
+            old_connection = random.choice(splittable_connections)      # randomly pick connection to split
             # add old connection to not split it again
-            self._previously_split_connections.append(old_connection.innovation)
+            genome.previously_split_connections.append(old_connection.innovation) # TODO: bad solution, after breeding list is empty which leads to splitting twice
+            # TODO: a solution may be to change encoding to account for number of split, so you can split the same connection multiple times without indexes being equal
+
             old_source = old_connection.source_node
             old_dest = old_connection.destination_node
-            new_node_index = encode_node(old_source.node_index, old_dest.node_index)
+            old_split_number = old_connection.split_number
+            new_node_index = encode_node(old_source.node_index, old_dest.node_index, old_split_number)
 
             old_connection.disable()
 

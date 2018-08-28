@@ -23,6 +23,7 @@ class Genome:
             config.excess_coefficient, config.disjoint_coefficient, config.weight_difference_coefficient
         self._weight_mutation_distribution = config.weight_mutation_distribution            # for mutation of changing weights
         self._connection_weight_mutation_distribution = config.connection_weight_mutation_distribution      # for mutation of connection creation
+        self._previously_split_connections = []          # list of connection gene which have already been split
         self.config = config                            # TODO: (property?)left config public on pourpse, for crossover TODO: what?
 
         self._genome_number = Genome._current_genome_number     # Liron: added for debugging, might wanna keep it anyway
@@ -75,6 +76,10 @@ class Genome:
     def genome_number(self):
         return self._genome_number
 
+    @property
+    def previously_split_connections(self):
+        return self._previously_split_connections
+
     def __init_node_genes(self):
         """Initializes node for the entire genome, i.e. adds SENSOR, OUTPUT, BIAS nodes which are present in all
         genomes, and adds necessary nodes for a given dictionary of connection_genes"""
@@ -113,7 +118,7 @@ class Genome:
             source_node = self._node_genes[source_index]
             dest_node = self._node_genes[dest_index]
 
-            # create a new node from the newly created source the the newly created dest with the same attributes as connection_gene
+            # create a new connection from the newly created source the the newly created dest with the same attributes as connection_gene
             new_connection = ConnectionGene(source_node, dest_node, connection_gene.weight, connection_gene.is_enabled(),
                                             connection_gene.innovation)
             assert self._connection_genes[new_connection.innovation] == connection_gene
@@ -126,10 +131,10 @@ class Genome:
         """Adds a single node gene to the genome"""
         #TODO: node index is sometimes tuple and sometimes int (when input\output\bias)
         if node_index in self._node_genes.keys():
-            raise ValueError("Node index %s already in genome" % node_index)
+            raise ValueError("Node index %s already in genome" % str(node_index))
         new_node_gene = NodeGene(node_type, node_index)
         self._node_genes[node_index] = new_node_gene
-        logging.info("New node gene added: " + str(new_node_gene))
+        logging.debug("New node gene added: " + str(new_node_gene))
         return new_node_gene
 
     def delete_node_gene(self, node_index):
@@ -139,7 +144,7 @@ class Genome:
         # note that all nodes start as isolated nodes after the __add_node mutation.
         assert self._node_genes[node_index].is_isolated()
 
-        logging.info("Node gene deleted: " + str(self._node_genes[node_index]))
+        logging.debug("Node gene deleted: " + str(self._node_genes[node_index]))
         del self._node_genes[node_index]
 
     def add_connection_gene(self, source, dest, weight, enabled=True, innovation=None):
@@ -157,7 +162,7 @@ class Genome:
         source.add_outgoing_connection(new_connection_gene)
         dest.add_incoming_connection(new_connection_gene)
 
-        logging.info("New connection gene added: " + str(new_connection_gene))
+        logging.debug("New connection gene added: " + str(new_connection_gene))
         return new_connection_gene.innovation
 
     def __str__(self):
@@ -171,7 +176,7 @@ class Genome:
 def compatibility_distance(genome1, genome2):
     """Returns the compatibility distance, a measure of how closely related two genomes are"""
     if genome1.size == 0 and genome2.size == 0:
-        logging.info("genome1: %s AND genome2: %s both have 0 genes and hence have compitability distance of 0"
+        logging.debug("genome1: %s AND genome2: %s both have 0 genes and hence have compitability distance of 0"
                      % (str(genome1), str(genome2)))
         return 0.0
     # create a new dict with all of the genomes' genes

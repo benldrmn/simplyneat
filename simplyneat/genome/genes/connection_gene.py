@@ -6,10 +6,11 @@ class ConnectionGene:
     #TODO: https://stackoverflow.com/questions/2080660/python-multiprocessing-and-a-shared-counter, https://eli.thegreenplace.net/2012/01/04/shared-counter-with-pythons-multiprocessing
     _current_innovation_number = 0
 
-    def __init__(self, source_node, destination_node, weight, enabled_flag=True, innovation=None):
+    def __init__(self, source_node, destination_node, weight, split_number, enabled_flag=True, innovation=None):
         self._source_node = source_node
         self._dest_node = destination_node
         self._weight = weight
+        self._split_number = split_number
         self._enabled = enabled_flag
         if innovation is None:
             self._innovation = ConnectionGene._current_innovation_number
@@ -42,6 +43,10 @@ class ConnectionGene:
     @weight.setter
     def weight(self, weight):
         self._weight = weight
+
+    @property
+    def split_number(self):
+        return self._split_number
 
     def enable(self):
         return self.__change_enabled_flag(True)

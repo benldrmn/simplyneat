@@ -74,10 +74,12 @@ class NodeGene:
 
     __repr__ = __str__
 
-
-def encode_node(prev_source_index, prev_dest_index):
+# TODO: if you add the 'split_number' parameter, also need to make sure when breeding to take the maximum split_number of matching connections
+# TODO: and also add in node_gene constructor to have 'split_number' parameter obviously
+# TODO: CTRL+SHIFT+F "add_connection_gene"
+def encode_node(prev_source_index, prev_dest_index, split_number):
     """Returns new node index based on the edge the node is splitting"""
-    return prev_source_index, prev_dest_index
+    return prev_source_index, prev_dest_index, split_number
 
 
 class NodeType(Enum):
