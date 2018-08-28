@@ -55,7 +55,7 @@ class Population:
 
     def __add_genome(self, genome):
         assert genome not in self._genomes
-        logging.info("New genome added: " + str(genome))
+        logging.debug("New genome added: " + str(genome))
         self._genomes.append(genome)
         self.__assign_species(genome)
 
@@ -68,7 +68,7 @@ class Population:
             # try to assign genome to species with given index
             if compatibility_distance(genome, representative) < self._compatibility_threshold:
                 self._list_of_species[index].add_genome(genome)
-                logging.info("Assigned genome to species: " + str(genome) + str(index))
+                logging.debug("Assigned genome to species: " + str(genome) + str(index))
                 return index
         # this is a new species!
         self._list_of_species.append(Species([genome]))
