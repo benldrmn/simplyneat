@@ -63,6 +63,12 @@ class Genome:
         return self._connection_genes
 
     @property
+    def enabled_connection_genes(self):
+        return {innovation: connection for innovation, connection in self._connection_genes.items()
+                if connection.is_enabled()}
+
+
+    @property
     def size(self):
         """Returns the length of the entire genome, connection genes and node genes combined"""
         return len(self._connection_genes) + len(self._node_genes)

@@ -27,8 +27,16 @@ class NodeGene:
         return self._incoming_connections
 
     @property
+    def enabled_incoming_connections(self):
+        return set(filter(lambda connection: connection.is_enabled(), self._incoming_connections))
+
+    @property
     def outgoing_connections(self):
         return self._outgoing_connections
+
+    @property
+    def enabled_outgoing_connections(self):
+        return set(filter(lambda connection: connection.is_enabled(), self._outgoing_connections))
 
     def add_incoming_connection(self, incoming_connection):
         self._incoming_connections.add(incoming_connection)
