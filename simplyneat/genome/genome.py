@@ -3,6 +3,8 @@ import logging
 import random
 import numpy as np
 import copy
+
+from simplyneat.agent.neuralnet import TheanoAgent
 from simplyneat.genome.genes.connection_gene import ConnectionGene
 from simplyneat.genome.genes.node_gene import NodeGene, NodeType
 # from simplyneat.agent.neuralnet import TheanoAgent        # TODO: remove after testing
@@ -45,12 +47,11 @@ class Genome:
 
         self.__init_node_genes()
 
-        # self._neural_net = self.__create_neural_network()     # TODO: remove comment after done debugging
-        # self._fitness = config.fitness_function(self._neural_net) #TODO: assuming for now that's the fitness_function's required api
-        self._fitness = 1                                       # TODO: remove comment after done debugging
+        self._neural_net = self.__create_neural_network()     # TODO: remove comment after done debugging
+        self._fitness = config.fitness_function(self._neural_net) #TODO: assuming for now that's the fitness_function's required api
 
-    # def __create_neural_network(self):                        # TODO: remove comment after done debugging
-    #     return TheanoAgent(self.config, self)                 # TODO: remove comment after done debugging
+    def __create_neural_network(self):                        # TODO: remove comment after done debugging
+        return TheanoAgent(self.config, self)                 # TODO: remove comment after done debugging
 
     @property
     def node_genes(self):
@@ -61,6 +62,12 @@ class Genome:
     def connection_genes(self):
         """Returns a dict of connection genes, where the key is the innovation number of the connection gene value"""
         return self._connection_genes
+
+    @property
+    def enabled_connection_genes(self):
+        return {innovation: connection for innovation, connection in self._connection_genes.items()
+                if connection.is_enabled()}
+
 
     @property
     def size(self):
@@ -114,8 +121,8 @@ class Genome:
             dest_node = self._node_genes[dest_index]
 
             # create a new node from the newly created source the the newly created dest with the same attributes as connection_gene
-            new_connection = ConnectionGene(source_node, dest_node, connection_gene.weight, connection_gene.is_enabled(),
-                                            connection_gene.innovation)
+            new_connection = ConnectionGene(source_node, dest_node, connection_gene.weight, connection_gene.split_number,
+                                            connection_gene.is_enabled(), connection_gene.innovation)
             assert self._connection_genes[new_connection.innovation] == connection_gene
             self._connection_genes[new_connection.innovation] = new_connection
 
@@ -129,7 +136,7 @@ class Genome:
             raise ValueError("Node index %s already in genome" % node_index)
         new_node_gene = NodeGene(node_type, node_index)
         self._node_genes[node_index] = new_node_gene
-        logging.info("New node gene added: " + str(new_node_gene))
+        logging.debug("New node gene added: " + str(new_node_gene))
         return new_node_gene
 
     def delete_node_gene(self, node_index):
@@ -139,10 +146,10 @@ class Genome:
         # note that all nodes start as isolated nodes after the __add_node mutation.
         assert self._node_genes[node_index].is_isolated()
 
-        logging.info("Node gene deleted: " + str(self._node_genes[node_index]))
+        logging.debug("Node gene deleted: " + str(self._node_genes[node_index]))
         del self._node_genes[node_index]
 
-    def add_connection_gene(self, source, dest, weight, enabled=True, innovation=None):
+    def add_connection_gene(self, source, dest, weight, split_number, enabled=True, innovation=None):
         """Adds a connection gene.
         By default innovation is None, which means we set the innovation for the new gene by looking at the static
         innovation count, otherwise the new gene's innovation number is innovation. 
@@ -151,13 +158,13 @@ class Genome:
             raise ValueError("Source node not defined for the genome!")
         if dest not in self._node_genes.values():           # TODO: error - thinks dest is a tuple
             raise ValueError("Destination node not defined for the genome!")
-        new_connection_gene = ConnectionGene(source, dest, weight, enabled, innovation)
+        new_connection_gene = ConnectionGene(source, dest, weight, split_number, enabled, innovation)
 
         self._connection_genes[new_connection_gene.innovation] = new_connection_gene
         source.add_outgoing_connection(new_connection_gene)
         dest.add_incoming_connection(new_connection_gene)
 
-        logging.info("New connection gene added: " + str(new_connection_gene))
+        logging.debug("New connection gene added: " + str(new_connection_gene))
         return new_connection_gene.innovation
 
     def __str__(self):
@@ -171,7 +178,7 @@ class Genome:
 def compatibility_distance(genome1, genome2):
     """Returns the compatibility distance, a measure of how closely related two genomes are"""
     if genome1.size == 0 and genome2.size == 0:
-        logging.info("genome1: %s AND genome2: %s both have 0 genes and hence have compitability distance of 0"
+        logging.debug("genome1: %s AND genome2: %s both have 0 genes and hence have compitability distance of 0"
                      % (str(genome1), str(genome2)))
         return 0.0
     # create a new dict with all of the genomes' genes
