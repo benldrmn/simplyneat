@@ -3,6 +3,8 @@ import logging
 import random
 import numpy as np
 import copy
+
+from simplyneat.agent.neuralnet import TheanoAgent
 from simplyneat.genome.genes.connection_gene import ConnectionGene
 from simplyneat.genome.genes.node_gene import NodeGene, NodeType
 # from simplyneat.agent.neuralnet import TheanoAgent        # TODO: remove after testing
@@ -23,7 +25,6 @@ class Genome:
             config.excess_coefficient, config.disjoint_coefficient, config.weight_difference_coefficient
         self._weight_mutation_distribution = config.weight_mutation_distribution            # for mutation of changing weights
         self._connection_weight_mutation_distribution = config.connection_weight_mutation_distribution      # for mutation of connection creation
-        self._previously_split_connections = []          # list of connection gene which have already been split
         self.config = config                            # TODO: (property?)left config public on pourpse, for crossover TODO: what?
 
         self._genome_number = Genome._current_genome_number     # Liron: added for debugging, might wanna keep it anyway
@@ -46,12 +47,11 @@ class Genome:
 
         self.__init_node_genes()
 
-        # self._neural_net = self.__create_neural_network()     # TODO: remove comment after done debugging
-        # self._fitness = config.fitness_function(self._neural_net) #TODO: assuming for now that's the fitness_function's required api
-        self._fitness = 1                                       # TODO: remove comment after done debugging
+        self._neural_net = self.__create_neural_network()     # TODO: remove comment after done debugging
+        self._fitness = config.fitness_function(self._neural_net) #TODO: assuming for now that's the fitness_function's required api
 
-    # def __create_neural_network(self):                        # TODO: remove comment after done debugging
-    #     return TheanoAgent(self.config, self)                 # TODO: remove comment after done debugging
+    def __create_neural_network(self):                        # TODO: remove comment after done debugging
+        return TheanoAgent(self.config, self)                 # TODO: remove comment after done debugging
 
     @property
     def node_genes(self):
@@ -62,6 +62,12 @@ class Genome:
     def connection_genes(self):
         """Returns a dict of connection genes, where the key is the innovation number of the connection gene value"""
         return self._connection_genes
+
+    @property
+    def enabled_connection_genes(self):
+        return {innovation: connection for innovation, connection in self._connection_genes.items()
+                if connection.is_enabled()}
+
 
     @property
     def size(self):
@@ -75,10 +81,6 @@ class Genome:
     @property
     def genome_number(self):
         return self._genome_number
-
-    @property
-    def previously_split_connections(self):
-        return self._previously_split_connections
 
     def __init_node_genes(self):
         """Initializes node for the entire genome, i.e. adds SENSOR, OUTPUT, BIAS nodes which are present in all
@@ -118,9 +120,9 @@ class Genome:
             source_node = self._node_genes[source_index]
             dest_node = self._node_genes[dest_index]
 
-            # create a new connection from the newly created source the the newly created dest with the same attributes as connection_gene
-            new_connection = ConnectionGene(source_node, dest_node, connection_gene.weight, connection_gene.is_enabled(),
-                                            connection_gene.innovation)
+            # create a new node from the newly created source the the newly created dest with the same attributes as connection_gene
+            new_connection = ConnectionGene(source_node, dest_node, connection_gene.weight, connection_gene.split_number,
+                                            connection_gene.is_enabled(), connection_gene.innovation)
             assert self._connection_genes[new_connection.innovation] == connection_gene
             self._connection_genes[new_connection.innovation] = new_connection
 
@@ -131,7 +133,7 @@ class Genome:
         """Adds a single node gene to the genome"""
         #TODO: node index is sometimes tuple and sometimes int (when input\output\bias)
         if node_index in self._node_genes.keys():
-            raise ValueError("Node index %s already in genome" % str(node_index))
+            raise ValueError("Node index %s already in genome" % node_index)
         new_node_gene = NodeGene(node_type, node_index)
         self._node_genes[node_index] = new_node_gene
         logging.debug("New node gene added: " + str(new_node_gene))
@@ -147,7 +149,7 @@ class Genome:
         logging.debug("Node gene deleted: " + str(self._node_genes[node_index]))
         del self._node_genes[node_index]
 
-    def add_connection_gene(self, source, dest, weight, enabled=True, innovation=None):
+    def add_connection_gene(self, source, dest, weight, split_number, enabled=True, innovation=None):
         """Adds a connection gene.
         By default innovation is None, which means we set the innovation for the new gene by looking at the static
         innovation count, otherwise the new gene's innovation number is innovation. 
@@ -156,7 +158,7 @@ class Genome:
             raise ValueError("Source node not defined for the genome!")
         if dest not in self._node_genes.values():           # TODO: error - thinks dest is a tuple
             raise ValueError("Destination node not defined for the genome!")
-        new_connection_gene = ConnectionGene(source, dest, weight, enabled, innovation)
+        new_connection_gene = ConnectionGene(source, dest, weight, split_number, enabled, innovation)
 
         self._connection_genes[new_connection_gene.innovation] = new_connection_gene
         source.add_outgoing_connection(new_connection_gene)

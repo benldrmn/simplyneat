@@ -20,7 +20,7 @@ class TheanoAgent:
         self._activations = {node: 0 for node in genome.node_genes.values()}
 
         connection_weights = {connection: theano.shared(value=connection.weight, name=str(connection))
-                                    for connection in genome.connection_genes.values()}
+                                    for connection in genome.enabled_connection_genes.values()}
         node_to_theano_scalar = {node: T.scalar(name=str(node), dtype=theano.config.floatX) for node in genome.node_genes.values()}
 
         # We take as possible inputs all of the nodes in the genome (even though some activations may not depend
@@ -31,15 +31,16 @@ class TheanoAgent:
 
         self._activation_functions = {}
         for node in node_to_theano_scalar.keys():
-            if node.node_type == NodeType.INPUT or not node.incoming_connections:
+            if node.node_type == NodeType.INPUT or not node.enabled_incoming_connections:
                 function_output = node_to_theano_scalar[node]
             else:
                 function_output = 0
-                for connection in node.incoming_connections:
+                for connection in node.enabled_incoming_connections:
                     function_output += connection_weights[connection] * node_to_theano_scalar[connection.source_node]
                 function_output = T.nnet.sigmoid(function_output) #TODO: change (configurable)
             #TODO: utilize outputs to have one function per layer instead of one per node
-            node_activation_func = theano.function(activation_function_inputs, function_output, on_unused_input='ignore')
+            node_activation_func = theano.function(activation_function_inputs, function_output,
+                                                   on_unused_input='ignore', allow_input_downcast=True)
             self._activation_functions[node] = node_activation_func
 
     def next_move(self, inputs):
@@ -98,7 +99,7 @@ class TheanoAgent:
         if node not in node_to_longest_acyclic_path_len or node_to_longest_acyclic_path_len[node] < path_len:
             node_to_longest_acyclic_path_len[node] = path_len
 
-            for connection in node.outgoing_connections:
+            for connection in node.enabled_outgoing_connections:
                 dest = connection.destination_node
                 if color[dest] != 'gray':  # if doesn't create a cycle
                     self.__get_longest_acyclic_paths(dest, path_len + 1, color, node_to_longest_acyclic_path_len)

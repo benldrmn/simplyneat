@@ -27,8 +27,16 @@ class NodeGene:
         return self._incoming_connections
 
     @property
+    def enabled_incoming_connections(self):
+        return set(filter(lambda connection: connection.is_enabled(), self._incoming_connections))
+
+    @property
     def outgoing_connections(self):
         return self._outgoing_connections
+
+    @property
+    def enabled_outgoing_connections(self):
+        return set(filter(lambda connection: connection.is_enabled(), self._outgoing_connections))
 
     def add_incoming_connection(self, incoming_connection):
         self._incoming_connections.add(incoming_connection)
@@ -74,9 +82,7 @@ class NodeGene:
 
     __repr__ = __str__
 
-# TODO: if you add the 'split_number' parameter, also need to make sure when breeding to take the maximum split_number of matching connections
-# TODO: and also add in node_gene constructor to have 'split_number' parameter obviously
-# TODO: CTRL+SHIFT+F "add_connection_gene"
+
 def encode_node(prev_source_index, prev_dest_index, split_number):
     """Returns new node index based on the edge the node is splitting"""
     return prev_source_index, prev_dest_index, split_number

@@ -63,6 +63,7 @@ class Config:
 
         # if no value supplied, set the provided default value to attribute
         if provided_value is None:
+            #TODO: we don't go in here
             setattr(self, attribute_name, default_value)
             logging.info("Config attribute %s set to default value %s" % (attribute_name, default_value))
         else:

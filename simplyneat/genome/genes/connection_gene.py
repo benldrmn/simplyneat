@@ -48,6 +48,10 @@ class ConnectionGene:
     def split_number(self):
         return self._split_number
 
+    @split_number.setter
+    def split_number(self, new_split_number):
+        self._split_number = new_split_number
+
     def enable(self):
         return self.__change_enabled_flag(True)
 

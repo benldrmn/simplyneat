@@ -3,7 +3,8 @@ import copy
 import logging
 import itertools
 
-from simplyneat.genome.genes.node_gene import NodeType
+from simplyneat.genome.genes.connection_gene import ConnectionGene
+from simplyneat.genome.genes.node_gene import NodeGene, encode_node, NodeType
 from simplyneat.genome.genes.node_gene import encode_node
 from simplyneat.genome.genome import calculate_mismatching_genes, Genome, compatibility_distance
 from simplyneat.population.population import Population
@@ -20,6 +21,7 @@ class Breeder:
         self._reset_breeder = config.reset_breeder
         self._max_tournament_size = config.max_tournament_size
         self._elite_group_size = config.elite_group_size
+        self._previously_split_connections = []          # list of connection gene which have already been split
         self._config = config
         self._mutation_probability_dictionary = {self.__mutate_add_connection: config.add_connection_probability,
                                                  self.mutate_add_node: config.add_node_probability,
@@ -79,15 +81,20 @@ class Breeder:
         disjoint, excess = calculate_mismatching_genes(connection_genes1, connection_genes2)
         mismatching = disjoint + excess
         matching = set(connection_genes1.keys()).intersection(set(connection_genes2.keys()))
-
+        #TODO: deep copy nodes and connections for the new genome instead of doing this
         offspring_connection_genes = {}
         # matching genes - inherit one from a random parent
         for innovation_number in matching:
+            max_split_number = max(connection_genes1[innovation_number].split_number,
+                                   connection_genes2[innovation_number].split_number)
             if random.choice([True, False]):        # take parent1's weight
-                offspring_connection_genes[innovation_number] = copy.copy(connection_genes1[innovation_number])
+                connection_gene = copy.copy(connection_genes1[innovation_number])
+                connection_gene.split_number = max_split_number
+                offspring_connection_genes[innovation_number] = connection_gene
             else:                                   # take parent2's weight
-                offspring_connection_genes[innovation_number] = copy.copy(connection_genes2[innovation_number])
-
+                connection_gene = copy.copy(connection_genes2[innovation_number])
+                connection_gene.split_number = max_split_number
+                offspring_connection_genes[innovation_number] = connection_gene
         # mismatched genes - inherit all from the fitter parent
         for innovation_number in mismatching:
             if innovation_number in connection_genes1.keys():
@@ -116,7 +123,7 @@ class Breeder:
             if (source, dest) in self._innovations_dictionary.keys():
                 new_innovation = self._innovations_dictionary[(source, dest)]       # innovation from previous mutations
             new_innovation = genome.add_connection_gene(source, dest, self._connection_weight_mutation_distribution(),
-                                                        True, new_innovation)
+                                                        0, True, new_innovation)
 
             self._innovations_dictionary[(source, dest)] = new_innovation
 
@@ -128,32 +135,27 @@ class Breeder:
         else:
             #
             splittable_connections = list(genome.connection_genes.values())
-            if not splittable_connections:
-                logging.debug("add_note mutation failed: no connections to split")
-                return
             splittable_connections = [connection for connection in splittable_connections
-                                      if connection.innovation not in genome.previously_split_connections]
+                                      if connection.innovation not in self._previously_split_connections]
             if not splittable_connections:
                 logging.debug("add_note mutation failed: all connections were already split")
                 return
-            old_connection = random.choice(splittable_connections)      # randomly pick connection to split
+            old_connection = random.choice(splittable_connections)
             # add old connection to not split it again
-            genome.previously_split_connections.append(old_connection.innovation) # TODO: bad solution, after breeding list is empty which leads to splitting twice
-            # TODO: a solution may be to change encoding to account for number of split, so you can split the same connection multiple times without indexes being equal
-
+            self._previously_split_connections.append(old_connection.innovation)
             old_source = old_connection.source_node
             old_dest = old_connection.destination_node
-            old_split_number = old_connection.split_number
-            new_node_index = encode_node(old_source.node_index, old_dest.node_index, old_split_number)
+            new_node_index = encode_node(old_source.node_index, old_dest.node_index, old_connection.split_number)
 
+            old_connection.split_number += 1
             old_connection.disable()
 
             new_node = genome.add_node_gene(NodeType.HIDDEN, new_node_index)
             # the new connection leading into the new node from the old source has weight 1 according to the NEAT paper
-            genome.add_connection_gene(old_source, new_node, 1, True)
+            genome.add_connection_gene(old_source, new_node, weight=1, split_number=0, enabled=True)
             # the new connection leading out of the new node from to the old dest has
             # the old connection's weight according to the NEAT paper
-            genome.add_connection_gene(new_node, old_dest, old_connection.weight, True)
+            genome.add_connection_gene(new_node, old_dest, weight=old_connection.weight, split_number=0, enabled=True)
 
     def __mutate_connection_weight(self, genome):
         """Alters the weight of a connection"""
@@ -196,6 +198,7 @@ class Breeder:
 
         # species_adjusted_fitness[i] is the adjusted fitness of species i
         population_total_adjusted_fitness = sum(species_total_adjusted_fitness)  # entire population's adjusted fitness
+        population_total_adjusted_fitness = max(population_total_adjusted_fitness, 1)
         # offspring number proportionate to relative fitness
         delta = max(0, self._elite_group_size - len(population.genomes))        # in case elite_size > population_size
         breeding_size = self._population_size - self._elite_group_size + delta  # don't need to breed elites
