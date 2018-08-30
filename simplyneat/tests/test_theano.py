@@ -8,7 +8,7 @@ from simplyneat.neat import Neat
 if __name__ == '__main__':
     """Testing the basic node and connection addition, works fine"""
     config = Config({'fitness_function': lambda x: 0, 'number_of_input_nodes': 3, 'number_of_output_nodes': 1})
-    genome = Genome(config=config)
+    genome = Genome(genome_number=0, config=config)
     breeder = Breeder(config=config)
     node_genes = genome.node_genes
     genome.add_connection_gene(node_genes[0], node_genes[3], 10)
