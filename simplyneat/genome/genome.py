@@ -4,10 +4,9 @@ import random
 import numpy as np
 import copy
 
-from simplyneat.agent.neuralnet import TheanoAgent
 from simplyneat.genome.genes.connection_gene import ConnectionGene
 from simplyneat.genome.genes.node_gene import NodeGene, NodeType
-# from simplyneat.agent.neuralnet import TheanoAgent        # TODO: remove after testing
+from simplyneat.agent.neuralnet import TheanoAgent
 
 
 class Genome:
@@ -17,7 +16,7 @@ class Genome:
     #todo: consider adding node_genes to the ctor so we can define each nodes activation function
     #todo: that way when we mutate a genome, we can get the nodes list and alter one nodes activation
     #TODO: Inherit also the nodes and thus save creating new nodes all the time - i.e. inheriting connection (a,b) also inherits nodes a and b
-    def __init__(self, config, connection_genes=None):
+    def __init__(self, config, genome_number, connection_genes=None):
         # Constants
         self._number_of_input_nodes = config.number_of_input_nodes
         self._number_of_output_nodes = config.number_of_output_nodes
@@ -27,8 +26,7 @@ class Genome:
         self._connection_weight_mutation_distribution = config.connection_weight_mutation_distribution      # for mutation of connection creation
         self.config = config                            # TODO: (property?)left config public on pourpse, for crossover TODO: what?
 
-        self._genome_number = Genome._current_genome_number     # Liron: added for debugging, might wanna keep it anyway
-        Genome._current_genome_number += 1
+        self._genome_number = genome_number
 
         if self._number_of_input_nodes <= 0:
             raise ValueError('number of input nodes must be greater than 0')
@@ -47,11 +45,11 @@ class Genome:
 
         self.__init_node_genes()
 
-        self._neural_net = self.__create_neural_network()     # TODO: remove comment after done debugging
-        self._fitness = config.fitness_function(self._neural_net) #TODO: assuming for now that's the fitness_function's required api
+        self._neural_net = self.__create_neural_network()
+        self._fitness = config.fitness_function(self._neural_net)
 
-    def __create_neural_network(self):                        # TODO: remove comment after done debugging
-        return TheanoAgent(self.config, self)                 # TODO: remove comment after done debugging
+    def __create_neural_network(self):
+        return TheanoAgent(self.config, self)
 
     @property
     def node_genes(self):
@@ -122,7 +120,7 @@ class Genome:
 
             # create a new node from the newly created source the the newly created dest with the same attributes as connection_gene
             new_connection = ConnectionGene(source_node, dest_node, connection_gene.weight, connection_gene.split_number,
-                                            connection_gene.is_enabled(), connection_gene.innovation)
+                                            connection_gene.innovation, connection_gene.is_enabled())
             assert self._connection_genes[new_connection.innovation] == connection_gene
             self._connection_genes[new_connection.innovation] = new_connection
 
@@ -149,7 +147,7 @@ class Genome:
         logging.debug("Node gene deleted: " + str(self._node_genes[node_index]))
         del self._node_genes[node_index]
 
-    def add_connection_gene(self, source, dest, weight, split_number, enabled=True, innovation=None):
+    def add_connection_gene(self, source, dest, weight, split_number, innovation, enabled=True, ):
         """Adds a connection gene.
         By default innovation is None, which means we set the innovation for the new gene by looking at the static
         innovation count, otherwise the new gene's innovation number is innovation. 
@@ -158,7 +156,7 @@ class Genome:
             raise ValueError("Source node not defined for the genome!")
         if dest not in self._node_genes.values():           # TODO: error - thinks dest is a tuple
             raise ValueError("Destination node not defined for the genome!")
-        new_connection_gene = ConnectionGene(source, dest, weight, split_number, enabled, innovation)
+        new_connection_gene = ConnectionGene(source, dest, weight, split_number, innovation, enabled)
 
         self._connection_genes[new_connection_gene.innovation] = new_connection_gene
         source.add_outgoing_connection(new_connection_gene)
@@ -169,7 +167,7 @@ class Genome:
 
     def __str__(self):
         return '[Genome number: %s \nNode genes: %s \nConnection genes: %s]' \
-               % (self._genome_number, self._node_genes, self._connection_genes)
+               % (self._genome_number, list(self._node_genes.values()), list(self._connection_genes.values()))
 
     def __repr__(self):
         return 'Genome number: %s' % self._genome_number

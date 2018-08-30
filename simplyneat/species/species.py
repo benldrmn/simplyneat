@@ -5,15 +5,12 @@ from simplyneat.genome.genome import Genome
 
 class Species:
 
-    _current_species_number = 0
-
-    def __init__(self, genomes):
+    def __init__(self, species_number, genomes):
         self._genomes = list(genomes)  # initial genomes in the species
         if not self._genomes:
             raise ValueError("A species must be initialized with at least one genome")
 
-        self._species_number = Species._current_species_number      # Liron: added for debugging
-        Species._current_species_number += 1
+        self._species_number = species_number
 
         self._representative = random.choice(self._genomes)
 

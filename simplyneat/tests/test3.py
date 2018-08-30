@@ -7,13 +7,9 @@ if __name__ == '__main__':
     """Testing how one breeding iteration affects species, works fine"""
     config = Config({'fitness_function': lambda x: 0, 'number_of_input_nodes': 5, 'number_of_output_nodes': 3,
                     'compatibility_threshold': 0.01})
-    genome = Genome(config=config)
+    genome = Genome(genome_number=0, config=config)
     breeder = Breeder(config=config)
     population = Population(config, genomes=[genome])
-    # print(population)
-    #
-    # print("Best genome: %s" % population.best_genome)
-    # print("Max fitness: %s" % population.max_fitness)
     new_population = breeder.breed_population(population)
 
     print(new_population)

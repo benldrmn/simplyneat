@@ -3,9 +3,7 @@ import copy
 import logging
 import itertools
 
-from simplyneat.genome.genes.connection_gene import ConnectionGene
-from simplyneat.genome.genes.node_gene import NodeGene, encode_node, NodeType
-from simplyneat.genome.genes.node_gene import encode_node
+from simplyneat.genome.genes.node_gene import NodeType, encode_node
 from simplyneat.genome.genome import calculate_mismatching_genes, Genome, compatibility_distance
 from simplyneat.population.population import Population
 import numpy as np
@@ -21,10 +19,11 @@ class Breeder:
         self._reset_breeder = config.reset_breeder
         self._max_tournament_size = config.max_tournament_size
         self._elite_group_size = config.elite_group_size
-        self._previously_split_connections = []          # list of connection gene which have already been split
+        self._genome_number = 1
+        self._innovation_number = 1
         self._config = config
         self._mutation_probability_dictionary = {self.__mutate_add_connection: config.add_connection_probability,
-                                                 self.mutate_add_node: config.add_node_probability,
+                                                 self.__mutate_add_node: config.add_node_probability,
                                                  self.__mutate_connection_weight: config.change_weight_probability,
                                                  self.__mutate_reenable_connection: config.reenable_connection_probability,
                                                  }
@@ -37,6 +36,7 @@ class Breeder:
         pairs_of_parents_to_breed = self.__generate_parents_pairs_to_breed(population)
         for genome1, genome2 in pairs_of_parents_to_breed:
             new_population_genomes.append(self.__breed_parents(genome1, genome2))
+        assert len(new_population_genomes) == self._population_size
         # mutate offsprings
         for genome in new_population_genomes:
             for mutation, probability in self._mutation_probability_dictionary.items():
@@ -47,7 +47,9 @@ class Breeder:
             species.reset_genomes()
         if self._reset_breeder:         # reset innovations list rather than creating a whole new breeder each time
             self._innovations_dictionary = {}
-        return Population(self._config, genomes=new_population_genomes, species=population.species)
+        assert len(new_population_genomes) == self._population_size
+        return Population(self._config, species_number=population.species_number,
+                          genomes=new_population_genomes, species=population.species)
 
     def __generate_parents_pairs_to_breed(self, population):
         species_list = population.species
@@ -59,10 +61,12 @@ class Breeder:
             for _ in range(new_species_distribution[species_index]):
                 # choose parents in k-tournament
                 genomes = species_list[species_index].genomes
+                assert len(genomes) > 0
                 k = min(self._max_tournament_size, len(genomes))
                 genome1 = max(random.sample(genomes, k), key=lambda genome: genome.fitness)
                 genome2 = max(random.sample(genomes, k), key=lambda genome: genome.fitness)
                 pairs_of_parents_to_breed.append((genome1, genome2))
+        assert len(pairs_of_parents_to_breed) + min(1, min(population.size, self._elite_group_size)), self== self._population_size
         return pairs_of_parents_to_breed
 
     def __breed_parents(self, parent_genome1, parent_genome2):
@@ -100,7 +104,9 @@ class Breeder:
             if innovation_number in connection_genes1.keys():
                 offspring_connection_genes[innovation_number] = copy.copy(connection_genes1[innovation_number])
 
-        return Genome(self._config, offspring_connection_genes)
+        new_genome = Genome(self._config, genome_number=self._genome_number, connection_genes=offspring_connection_genes)
+        self._genome_number += 1
+        return new_genome
 
     def __mutate_add_connection(self, genome):
         assert isinstance(genome, Genome)
@@ -122,27 +128,29 @@ class Breeder:
             new_innovation = None         # default value, sets new innovation by static innovation counter
             if (source, dest) in self._innovations_dictionary.keys():
                 new_innovation = self._innovations_dictionary[(source, dest)]       # innovation from previous mutations
+            else:
+                new_innovation = self._innovation_number
+                self._innovation_number += 1
             new_innovation = genome.add_connection_gene(source, dest, self._connection_weight_mutation_distribution(),
-                                                        0, True, new_innovation)
+                                                        0, new_innovation, True)
 
             self._innovations_dictionary[(source, dest)] = new_innovation
 
-    def mutate_add_node(self, genome):      # TODO: made this public for the test, change also in dictionary
+    def __mutate_add_node(self, genome):
         """Takes an existing edge and splits it in the middle with a new node"""
         assert isinstance(genome, Genome)
         if not genome.connection_genes:
             logging.debug("add_note mutation failed: no connection genes to split")
         else:
             #
-            splittable_connections = list(genome.connection_genes.values())
-            splittable_connections = [connection for connection in splittable_connections
-                                      if connection.innovation not in self._previously_split_connections]
-            if not splittable_connections:
-                logging.debug("add_note mutation failed: all connections were already split")
+            active_connections = list(genome.connection_genes.values())
+            active_connections = [connection for connection in active_connections
+                                      if connection.is_enabled()]
+            if not active_connections:
+                logging.debug("add_note mutation failed: all connections are disabled")
                 return
-            old_connection = random.choice(splittable_connections)
+            old_connection = random.choice(active_connections)
             # add old connection to not split it again
-            self._previously_split_connections.append(old_connection.innovation)
             old_source = old_connection.source_node
             old_dest = old_connection.destination_node
             new_node_index = encode_node(old_source.node_index, old_dest.node_index, old_connection.split_number)
@@ -152,10 +160,14 @@ class Breeder:
 
             new_node = genome.add_node_gene(NodeType.HIDDEN, new_node_index)
             # the new connection leading into the new node from the old source has weight 1 according to the NEAT paper
-            genome.add_connection_gene(old_source, new_node, weight=1, split_number=0, enabled=True)
+            genome.add_connection_gene(old_source, new_node, weight=1,
+                                       innovation=self._innovation_number, split_number=0, enabled=True)
+            self._innovation_number += 1
             # the new connection leading out of the new node from to the old dest has
             # the old connection's weight according to the NEAT paper
-            genome.add_connection_gene(new_node, old_dest, weight=old_connection.weight, split_number=0, enabled=True)
+            genome.add_connection_gene(new_node, old_dest, weight=old_connection.weight,
+                                       innovation=self._innovation_number, split_number=0, enabled=True)
+            self._innovation_number += 1
 
     def __mutate_connection_weight(self, genome):
         """Alters the weight of a connection"""

@@ -64,7 +64,7 @@ class NodeGene:
         return False
 
     def __str__(self):
-        return "[(Node type: %s, index: %s)]" % (self.node_type, self._node_index)
+        return "[%s]" % str(self._node_index)
         # return "Node type: %s, index: %d," \
         #        " has connections from: %s," \
         #        " has connections to: %s" %\
