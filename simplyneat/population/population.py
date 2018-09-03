@@ -9,7 +9,7 @@ import numpy as np
 
 class Population:
 
-    def __init__(self, config, genomes=None, species=None):
+    def __init__(self, config, species_number, genomes=None, species=None):
         """Builds the population according to a list of genomes and species. 
         Assign each organism to one of the given species."""
         if species is None:
@@ -22,6 +22,7 @@ class Population:
             self._genomes = genomes
         self._compatibility_threshold = config.compatibility_threshold      # threshold for being in the same species
         self._size = config.population_size                                 # population size
+        self._species_number = species_number
         self._elite_group_size = config.elite_group_size                    # members of population who always pass on
         self._config = config
 
@@ -46,12 +47,16 @@ class Population:
     @property
     def elite_group(self):
         """Returns a list of the best genomes which we'd like to keep for the next generation"""
-        sorted_genomes = sorted(self.genomes, key=lambda genome: genome.fitness, reverse=True)
+        sorted_genomes = sorted(self._genomes, key=lambda genome: genome.fitness, reverse=True)
         return sorted_genomes[0:self._elite_group_size]
 
     @property
     def size(self):
         return self._size
+
+    @property
+    def species_number(self):
+        return self._species_number     # serial number to give to next species
 
     def __add_genome(self, genome):
         assert genome not in self._genomes
@@ -71,7 +76,8 @@ class Population:
                 logging.debug("Assigned genome to species: " + str(genome) + str(index))
                 return index
         # this is a new species!
-        self._list_of_species.append(Species([genome]))
+        self._list_of_species.append(Species(self._species_number, [genome]))
+        self._species_number += 1
         return len(self._list_of_species)-1  # the indexes are 0-based while len obviously isn't
 
     def __speciate_population(self):
@@ -104,15 +110,15 @@ class Population:
 
     @property
     def max_fitness(self):
-        return max([genome.fitness for genome in self.genomes])
+        return max([genome.fitness for genome in self._genomes])
 
     @property
     def min_fitness(self):
-        return min([genome.fitness for genome in self.genomes])
+        return min([genome.fitness for genome in self._genomes])
 
     @property
     def average_fitness(self):
-        return np.mean([genome.fitness for genome in self.genomes])
+        return np.mean([genome.fitness for genome in self._genomes])
 
     @property
     def number_of_species(self):
@@ -120,11 +126,11 @@ class Population:
 
     @property
     def best_genome(self):
-        return max(self.genomes, key=lambda genome: genome.fitness)
+        return max(self._genomes, key=lambda genome: genome.fitness)
 
     @property
     def worst_genome(self):
-        return min(self.genomes, key=lambda genome: genome.fitness)
+        return min(self._genomes, key=lambda genome: genome.fitness)
 
     @property
     def biggest_species(self):
@@ -132,11 +138,13 @@ class Population:
 
     @property
     def species_size_histogram(self):
-        return {species.species_number: len(species.genomes) for species in self._list_of_species}
+        hist = {species.species_number: len(species.genomes) for species in self._list_of_species}
+        assert sum(list(hist.values())) in {self.size, 1}
+        return hist
 
     def __str__(self):
         return '[Population with %s species and %s genomes: \nSpecies: %s\n]' \
-               % (len(self.species), len(self.genomes), self.species)
+               % (len(self.species), len(self._genomes), self.species)
 
     __repr__ = __str__
 

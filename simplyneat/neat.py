@@ -17,9 +17,9 @@ class Neat:
         logging.info("Default number of generations set")
         self._breeder = Breeder(config)
         logging.info("Breeder set")
-        self._initial_genome = Genome(config)   # first organism, the minimal organism the entire population grows from
+        self._initial_genome = Genome(config, genome_number=0)   # first organism, the minimal organism the entire population grows from
         logging.info("Initial genome set")
-        self._population = Population(config, genomes=[self._initial_genome])
+        self._population = Population(config, species_number=1, genomes=[self._initial_genome])
         logging.info("Initial population set")
         # dictionary of statistics, key is StatisticsType value is a list of statistics
         self._statistics = {statistic: [] for statistic in StatisticsTypes}
@@ -45,12 +45,14 @@ class Neat:
 
     def __step(self):
         """A single iteration of NEAT's algorithm, test the entire population and get the next generation"""
+        for species in self._population.species:
+            print("species %s's representative: " % species.species_number)
+            print(species.representative)
         self.__add_statistics()
-        logging.info("Max fitness: %s" % str(self._statistics[StatisticsTypes.MAX_FITNESS][-1]))
-        logging.info("Average fitness: %s" % str(self._statistics[StatisticsTypes.AVERAGE_FITNESS][-1]))
-        logging.info("Breeding new generation")
+        # logging.info("Max fitness: %s" % str(self._statistics[StatisticsTypes.MAX_FITNESS][-1]))
+        # logging.info("Average fitness: %s" % str(self._statistics[StatisticsTypes.AVERAGE_FITNESS][-1]))
+        # logging.info("Breeding new generation")
         self._population = self._breeder.breed_population(self._population)
-
 
     def __add_statistics(self):
         """Appends to each list of statistics according to how the generation performed. 

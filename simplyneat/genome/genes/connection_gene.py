@@ -3,22 +3,13 @@ import logging
 
 class ConnectionGene:
 
-    #TODO: https://stackoverflow.com/questions/2080660/python-multiprocessing-and-a-shared-counter, https://eli.thegreenplace.net/2012/01/04/shared-counter-with-pythons-multiprocessing
-    _current_innovation_number = 0
-
-    def __init__(self, source_node, destination_node, weight, split_number, enabled_flag=True, innovation=None):
+    def __init__(self, source_node, destination_node, weight, split_number, innovation, enabled_flag=True):
         self._source_node = source_node
         self._dest_node = destination_node
         self._weight = weight
         self._split_number = split_number
         self._enabled = enabled_flag
-        if innovation is None:
-            self._innovation = ConnectionGene._current_innovation_number
-            ConnectionGene._current_innovation_number += 1
-        else:
-            if not isinstance(innovation, int):
-                raise ValueError("innovation must be of type int (or None for the next possible innovation)")
-            self._innovation = innovation
+        self._innovation = innovation
 
     @property
     def source_node(self):
@@ -69,10 +60,8 @@ class ConnectionGene:
         return prev_flag != new_flag
 
     def __str__(self):
-        return "[(Connection source: %s, destination: %s, weight: %s, enabled: %s, innovation: %s)]" \
-               % (self._source_node, self._dest_node, self._weight, self._enabled, str(self._innovation))
-        # return "Connection source: %s, destination: %s, weight: %d, innovation number: %d, enabled: %s" %\
-        #         (self._source_node, self._dest_node, self.weight, self._innovation, str(self._enabled))
+        return "[%s,%s,%s,%s,%s]" \
+               % (self._source_node.node_index, self._dest_node.node_index, self._weight, self._enabled, str(self._innovation))
 
     def __key(self):
         return self._source_node, self._dest_node, self._weight, self._enabled, self._innovation
