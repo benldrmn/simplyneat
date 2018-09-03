@@ -77,7 +77,7 @@ class TheanoAgent:
     def __divide_nodes_to_layers(self, node_genes):
         node_to_longest_acyclic_path_len = {}  # key: node, value: longest white path to node TODO: explain
 
-        color = {node: 'white' for node in node_genes}
+        color = {node: 'not visited' for node in node_genes}
         for node in node_genes:
             if node.node_type == NodeType.SENSOR:
                 self.__get_longest_acyclic_paths(node, 0, color, node_to_longest_acyclic_path_len)
@@ -91,17 +91,17 @@ class TheanoAgent:
         return layer_to_node_genes
 
     def __get_longest_acyclic_paths(self, node, path_len, color, node_to_longest_acyclic_path_len):
-        if color[node] == 'gray':
+        if color[node] == 'visited':
             return
 
-        color[node] = 'gray'
+        color[node] = 'visited'
 
         if node not in node_to_longest_acyclic_path_len or node_to_longest_acyclic_path_len[node] < path_len:
             node_to_longest_acyclic_path_len[node] = path_len
 
             for connection in node.enabled_outgoing_connections:
                 dest = connection.destination_node
-                if color[dest] != 'gray':  # if doesn't create a cycle
+                if color[dest] != 'visited':  # if doesn't create a cycle
                     self.__get_longest_acyclic_paths(dest, path_len + 1, color, node_to_longest_acyclic_path_len)
 
-        color[node] = 'white'
+        color[node] = 'not visited'
