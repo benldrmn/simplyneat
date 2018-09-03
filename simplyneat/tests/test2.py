@@ -5,11 +5,11 @@ from simplyneat.breeder.breeder import Breeder
 if __name__ == '__main__':
     """Testing the basic node and connection addition, works fine"""
     config = Config({'fitness_function': lambda x: 0, 'number_of_input_nodes': 5, 'number_of_output_nodes': 3})
-    genome = Genome(config=config)
+    genome = Genome(genome_number=0, config=config)
     breeder = Breeder(config=config)
     node_genes = genome.node_genes
     genome.add_connection_gene(node_genes[0], node_genes[5], 5)
-    breeder.mutate_add_node(genome)             # should split the 0->5 edge
+    breeder.__mutate_add_node(genome)             # should split the 0->5 edge
     genome.add_connection_gene(node_genes[(0, 5)], node_genes[7], 12)
     genome.add_connection_gene(node_genes[0], node_genes[6], 6)
     genome.add_connection_gene(node_genes[1], node_genes[6], 7)

@@ -17,6 +17,7 @@ class Config:
         'population_size': 1000,
         'elite_group_size': 50,                                         # number of members who always pass to next generation
 
+        'verbose': True,
         'compatibility_threshold': 6,
         'excess_coefficient': 2,            # TODO: find values and give meaningful documentation
         'disjoint_coefficient': 2,
