@@ -32,7 +32,7 @@ if __name__ == '__main__':
                     'compatibility_threshold': 6, 'verbose': True})
 
     neat = Neat(config)
-    statistics = neat.run(20)
+    statistics = neat.run(2)
     print(statistics[StatisticsTypes.MAX_FITNESS])
     print(statistics[StatisticsTypes.BEST_GENOME])
 

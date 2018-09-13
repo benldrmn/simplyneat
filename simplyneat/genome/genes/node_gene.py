@@ -1,4 +1,3 @@
-import logging
 from enum import Enum
 
 
@@ -7,10 +6,10 @@ class NodeGene:
     def __init__(self, node_type, node_index):
         if node_type not in NodeType:
             raise ValueError("Node type not recognized")
-        # SENSOR, OUTPUT, HIDDEN or BIAS
+        # INPUT, OUTPUT, HIDDEN or BIAS
         self._type = node_type
         # a number of internal book-keeping, as in the NEAT paper's illustrations
-        self._node_index = node_index
+        self._index = node_index
         self._incoming_connections = set()
         self._outgoing_connections = set()
 
@@ -19,8 +18,8 @@ class NodeGene:
         return self._type
 
     @property
-    def node_index(self):
-        return self._node_index
+    def index(self):
+        return self._index
 
     @property
     def incoming_connections(self):
@@ -63,26 +62,20 @@ class NodeGene:
             return True
         return False
 
+    #TODO: consider more verbose str
     def __str__(self):
-        return "[%s]" % str(self._node_index)
-        # return "Node type: %s, index: %d," \
-        #        " has connections from: %s," \
-        #        " has connections to: %s" %\
-        #        (self.type, self._node_index, str(self._has_connections_from), str(self._has_connections_to))
+        return str(self._index)
 
     def __key(self):
-        return self._type, self._node_index
+        return self._type, self._index
 
     def __eq__(self, y):
-
         return self.__key() == y.__key()            # TODO: simple equality fucks up when one is int and the other a tuple
 
     def __hash__(self):
         return hash(self.__key())
 
-    __repr__ = __str__
-
-
+#TODO: maybe argument is connection so we can use it to define encoding even if different node activations (internal DS that remmbers how many splits for each activation)
 def encode_node(prev_source_index, prev_dest_index, split_number):
     """Returns new node index based on the edge the node is splitting"""
     return prev_source_index, prev_dest_index, split_number
@@ -90,8 +83,6 @@ def encode_node(prev_source_index, prev_dest_index, split_number):
 
 class NodeType(Enum):
     BIAS = 'BIAS'
-    # SENSOR node is a different name for an INPUT node
-    SENSOR = 'INPUT'
     INPUT = 'INPUT'
     HIDDEN = 'HIDDEN'
     OUTPUT = 'OUTPUT'

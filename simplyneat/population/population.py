@@ -9,7 +9,7 @@ import numpy as np
 
 class Population:
 
-    def __init__(self, config, species_number, genomes=None, species=None):
+    def __init__(self, config, genomes=None, species=None):
         """Builds the population according to a list of genomes and species. 
         Assign each organism to one of the given species."""
         if species is None:
@@ -22,13 +22,12 @@ class Population:
             self._genomes = genomes
         self._compatibility_threshold = config.compatibility_threshold      # threshold for being in the same species
         self._size = config.population_size                                 # population size
-        self._species_number = species_number
         self._elite_group_size = config.elite_group_size                    # members of population who always pass on
         self._config = config
 
         # generation number
         # divide the genomes into species
-        self.__speciate_population()
+        self._speciate_population()
         # set new representatives or eliminate extinct species according to new generation genomes
         for species in self._list_of_species:
             if len(species.genomes) != 0:
@@ -54,17 +53,13 @@ class Population:
     def size(self):
         return self._size
 
-    @property
-    def species_number(self):
-        return self._species_number     # serial number to give to next species
-
-    def __add_genome(self, genome):
+    def _add_genome(self, genome):
         assert genome not in self._genomes
         logging.debug("New genome added: " + str(genome))
         self._genomes.append(genome)
-        self.__assign_species(genome)
+        self._assign_species(genome)
 
-    def __assign_species(self, genome):
+    def _assign_species(self, genome):
         """Assigns a species to a given genome, returning the index of the assigned species"""
         indexes = list(range(len(self._list_of_species)))
         random.shuffle(indexes)     # random permutation of indexes
@@ -75,15 +70,14 @@ class Population:
                 self._list_of_species[index].add_genome(genome)
                 logging.debug("Assigned genome to species: " + str(genome) + str(index))
                 return index
-        # this is a new species!
-        self._list_of_species.append(Species(self._species_number, [genome]))
-        self._species_number += 1
-        return len(self._list_of_species)-1  # the indexes are 0-based while len obviously isn't
+        # The genome doesn't belong to an existing species. This is a new species, with only genome as a member for now.
+        self._list_of_species.append(Species([genome]))
+        return len(self._list_of_species) - 1  # the indexes are 0-based while len obviously isn't
 
-    def __speciate_population(self):
+    def _speciate_population(self):
         """Assign a species for every genome in the current population"""
         for genome in self._genomes:
-            self.__assign_species(genome)
+            self._assign_species(genome)
 
     def get_statistic(self, statistic):
         """Returns a certain statistic which is kept by the population.
@@ -102,10 +96,6 @@ class Population:
             return self.best_genome
         if statistic == StatisticsTypes.WORST_GENOME:
             return self.worst_genome
-        if statistic == StatisticsTypes.BIGGEST_SPECIES:
-            return self.biggest_species
-        if statistic == StatisticsTypes.SPECIES_SIZE_HISTOGRAM:
-            return self.species_size_histogram
         raise ValueError("Statistic type unhandled in population")
 
     @property
@@ -132,23 +122,13 @@ class Population:
     def worst_genome(self):
         return min(self._genomes, key=lambda genome: genome.fitness)
 
-    @property
-    def biggest_species(self):
-        return max(self.species, key=lambda species: len(species.genomes)).species_number
-
-    @property
-    def species_size_histogram(self):
-        hist = {species.species_number: len(species.genomes) for species in self._list_of_species}
-        assert sum(list(hist.values())) in {self.size, 1}
-        return hist
-
     def __str__(self):
         return '[Population with %s species and %s genomes: \nSpecies: %s\n]' \
                % (len(self.species), len(self._genomes), self.species)
 
     __repr__ = __str__
 
-
+#TODO: refactor out to stats class
 class StatisticsTypes(Enum):
     MAX_FITNESS = 'MAX_FITNESS'
     MIN_FITNESS = 'MIN_FITNESS'
@@ -156,5 +136,3 @@ class StatisticsTypes(Enum):
     NUM_SPECIES = 'NUM_SPECIES'
     BEST_GENOME = 'BEST_GENOME'
     WORST_GENOME = 'WORST_GENOME'
-    BIGGEST_SPECIES = 'BIGGEST_SPECIES'
-    SPECIES_SIZE_HISTOGRAM = 'SPECIES_SIZE_HISTOGRGAM'

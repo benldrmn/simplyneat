@@ -5,12 +5,10 @@ from simplyneat.genome.genome import Genome
 
 class Species:
 
-    def __init__(self, species_number, genomes):
+    def __init__(self, genomes):
         self._genomes = list(genomes)  # initial genomes in the species
         if not self._genomes:
             raise ValueError("A species must be initialized with at least one genome")
-
-        self._species_number = species_number
 
         self._representative = random.choice(self._genomes)
 
@@ -21,10 +19,6 @@ class Species:
     @property
     def representative(self):
         return self._representative
-
-    @property
-    def species_number(self):
-        return self._species_number
 
     def randomize_representative(self):
         """Sets a random representative. 
@@ -41,8 +35,8 @@ class Species:
         self._genomes = []
 
     def __str__(self):
-        return '\n[Species number: %s. Number of  genomes: %s. Representative number: %s. List of genomes: %s]' % \
-               (self._species_number, len(self._genomes), self._representative.genome_number, self._genomes)
+        return '\n[Representative number: %s. List of genomes: %s]' % \
+               (len(self._genomes), self._genomes)
 
     __repr__ = __str__
 
