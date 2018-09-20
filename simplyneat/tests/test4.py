@@ -11,7 +11,6 @@ if __name__ == '__main__':
     neat = Neat(config)
     statistics = neat.run(20)
     print(statistics[StatisticsTypes.SPECIES_SIZE_HISTOGRAM])
-    print(statistics[StatisticsTypes.BEST_GENOME][-1].genome_number)
     print(statistics[StatisticsTypes.MAX_FITNESS][-1])
 
 
