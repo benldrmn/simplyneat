@@ -5,13 +5,12 @@ import random
 from simplyneat.genome.genes.node_gene import NodeType, encode_node
 from simplyneat.genome.genome import Genome
 
-
 """each mutation receives a genome (and possibly additional parameters such a distribution function). The mutation
 mutates the genome inplace.
 Returns a list of the changed gene(s) of the given genome.
 """
 
-
+#TODO: have it flip the state instead only enable
 def mutate_reenable_connection(genome):
     connection_genes = list(genome.connection_genes.values())
     disabled_connection_genes = [connection_gene for connection_gene in connection_genes
@@ -33,9 +32,7 @@ def mutate_add_connection(genome, connection_weight_mutation_distribution):
                              if genome.node_genes[node_index].node_type not in [NodeType.BIAS, NodeType.INPUT]]
     # Two edges with the same source and destination are not possible.
     possible_edges = list(set(itertools.product(possible_sources, possible_destinations)) -
-                          set(map(lambda connection_gene: (connection_gene.source_node.index,
-                                                           connection_gene.destination_node.index),
-                                  genome.connection_genes.values())))
+                          set([connection_gene.index for connection_gene in genome.connection_genes.values()]))
     if not possible_edges:
         logging.debug("No possible edges. Possible sources: %s, possible destinations: %s, current edges: %s",
                       str(possible_sources), str(possible_destinations), str(genome.connection_genes.values()))
@@ -91,5 +88,6 @@ def mutate_connection_weight(genome, weight_mutation_distribution):
     else:
         connection_gene = random.choice(list(genome.connection_genes.values()))
         connection_gene.weight += weight_mutation_distribution()
+        #TODO: clip weights?
         return [connection_gene]
         # TODO: read 4.1 better to understand how this works

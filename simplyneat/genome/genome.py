@@ -1,12 +1,13 @@
-import itertools
+import copy
 import logging
 import random
-import numpy as np
-import copy
+import time
 
+import numpy as np
+
+from simplyneat.agent.agent import Agent
 from simplyneat.genome.genes.connection_gene import ConnectionGene
 from simplyneat.genome.genes.node_gene import NodeGene, NodeType
-from simplyneat.agent.theano_agent import TheanoAgent
 
 
 class Genome:
@@ -24,6 +25,8 @@ class Genome:
 
         self._config = config
 
+        #todo: create a helper logger init func for all loggers
+
         if self._number_of_input_nodes <= 0:
             raise ValueError('number of input nodes must be greater than 0')
         if self._number_of_output_nodes <= 0:
@@ -35,19 +38,25 @@ class Genome:
         if connection_genes is None:
             self._connection_genes = {}
         else:
-            #TODO: find a more elegant solution
+            #TODO: find a more elegant solution (deep copy connection genes?)
             # shallow copy the given connection_genes dict. The dict's content will be altered
-            # during __init_node_genes() - replaced with new connection objects.
+            # during _init_connection_genes_nodes() - replaced with new connection objects.
             self._connection_genes = copy.copy(connection_genes)
 
         self._init_node_genes()
 
-        self._neural_net = self._create_neural_network()
-        self._fitness = config.fitness_function(self._neural_net)
+        #TODO: can't save in self agent cause tensorflow is not pickleable
+        #self._agent = Agent(self._config, self)
 
-    #todo: REWRITE THIS FUNC
-    def _create_neural_network(self):
-        return TheanoAgent(self._config, self)
+        fitness_init_time = time.time()
+        self._fitness = config.fitness_function(Agent(self._config, self))
+        #We only allow non-negative fitness functions
+        assert self._fitness >= 0
+        logging.debug("Fitness calculation (%s) took %s sec" % (str(self._fitness), str(time.time() - fitness_init_time)))
+
+    #TODO: rethink
+    def save_agent(self):
+        return Agent(self._config, self).save()
 
     @property
     def node_genes(self):
@@ -66,6 +75,7 @@ class Genome:
 
     @property
     def size(self):
+        #TODO: rethink if needed (confusing defiinition - only connection or also nodes?)
         """Returns the length of the entire genome, connection genes and node genes combined"""
         return len(self._connection_genes) + len(self._node_genes)
 
@@ -76,15 +86,12 @@ class Genome:
     def _init_node_genes(self):
         """Initializes node for the entire genome, i.e. adds INPUT, OUTPUT, BIAS nodes which are present in all
         genomes, and adds necessary nodes for a given dictionary of connection_genes"""
-        assert self._number_of_output_nodes > 0
-        assert self._number_of_input_nodes > 0
 
         for i in range(self._number_of_input_nodes):
             self.add_node_gene(NodeType.INPUT, i)
         for i in range(self._number_of_output_nodes):
             self.add_node_gene(NodeType.OUTPUT, self._number_of_input_nodes + i)
         self.add_node_gene(NodeType.BIAS, -1)        # node with index -1 is the bias
-        logging.debug("Added INPUT, OUTPUT and BIAS node genes")
 
         # if we have connections we need to add their corresponding nodes to the genome
         self._init_connection_genes_nodes()
@@ -102,11 +109,9 @@ class Genome:
             # if node doesn't exist, it has to be a hidden node since all of the other types were created and
             # add to the self._node_genes dict in init_node_genes
             if source_index not in self._node_genes.keys():
-                self.add_node_gene(NodeType.HIDDEN, source_index)      # add source index
-                logging.debug("Added source node gene with index: " + str(source_index))
+                self.add_node_gene(NodeType.HIDDEN, source_index)
             if dest_index not in self._node_genes.keys():
-                self.add_node_gene(NodeType.HIDDEN, dest_index)        # add dest index
-                logging.debug("Added dest node gene with index: " + str(dest_index))
+                self.add_node_gene(NodeType.HIDDEN, dest_index)
 
             source_node = self._node_genes[source_index]
             dest_node = self._node_genes[dest_index]
@@ -130,18 +135,7 @@ class Genome:
             raise ValueError("Node index %s already in genome" % node_index)
         new_node_gene = NodeGene(node_type, node_index)
         self._node_genes[node_index] = new_node_gene
-        logging.debug("New node gene added: " + str(new_node_gene))
         return new_node_gene
-
-    def delete_node_gene(self, node_index):
-        if node_index not in self._node_genes.keys():
-            raise ValueError("Node index not in genome")
-        # we only delete nodes if they became isolated after a delete_connection mutation.
-        # note that all nodes start as isolated nodes after the __add_node mutation.
-        assert self._node_genes[node_index].is_isolated()
-
-        logging.debug("Node gene deleted: " + str(self._node_genes[node_index]))
-        del self._node_genes[node_index]
 
     def add_connection_gene(self, source, dest, weight, split_number, innovation=None, enabled=True):
         """Adds a connection gene. Defaults to None, which implies that the innovation number is not yet known and should
@@ -159,26 +153,26 @@ class Genome:
         source.add_outgoing_connection(new_connection_gene)
         dest.add_incoming_connection(new_connection_gene)
 
-        logging.debug("New connection gene added: " + str(new_connection_gene))
-
         return new_connection_gene
 
     def __str__(self):
-        return '[Node genes: %s \nConnection genes: %s]' \
-               % (list(self._node_genes.values()), list(self._connection_genes.values()))
+        return 'Genome Node genes: %s \nGenome Connection genes: %s' %\
+               ([str(node) for node in self._node_genes.values()],
+                [str(connection) for connection in self._connection_genes.values()])
 
 
 def compatibility_distance(genome1, genome2):
     """Returns the compatibility distance, a measure of how closely related two genomes are"""
-    if genome1.size == 0 and genome2.size == 0:
-        logging.debug("genome1: %s AND genome2: %s both have 0 genes and hence have compatibility distance of 0"
-                      % (str(genome1), str(genome2)))
+    #TODO: diverging from paper? only count connection genes
+    if len(genome1.connection_genes) == 0 and len(genome2.connection_genes) == 0:
+        # logging.debug("genome1: %s AND genome2: %s both have 0 connection genes and hence have compatibility distance of 0"
+        #               % (str(genome1), str(genome2)))
         return 0.0
-    # create a new dict with all of the genomes' genes
+    # create a new dict with all of the genomes' genes with innovation as key for easy processing later on
     innovation_to_connections1 = {connection.innovation: connection for connection in genome1.connection_genes.values()}
     innovation_to_connections2 = {connection.innovation: connection for connection in genome2.connection_genes.values()}
-    # N is as defined in the NEAT paper (number of genes in the larger genome)
-    N = max(genome1.size, genome2.size)
+    # N is as defined in the NEAT paper (number of genes in the larger genome. We only consider the connection genes)
+    N = max(len(genome1.connection_genes), len(genome2.connection_genes), 1)
 
     disjoint, excess = calculate_mismatching_genes(innovation_to_connections1, innovation_to_connections2)
     matching_connection_genes_innovations = set(innovation_to_connections1.keys()).intersection(set(innovation_to_connections2.keys()))
@@ -188,13 +182,15 @@ def compatibility_distance(genome1, genome2):
                               for innovation_num in matching_connection_genes_innovations]
         average_weight_difference = np.mean(weight_differences)
     else:
-        average_weight_difference = 0
+        average_weight_difference = 0.0
 
     # TODO: maybe find prettier solution for coefficients
-    return genome1.excess_coefficient*len(excess)/N + genome1.disjoint_coefficient*len(disjoint)/N +\
+    distance = genome1.excess_coefficient*len(excess)/N + genome1.disjoint_coefficient*len(disjoint)/N +\
            genome1.weight_difference_coefficient*average_weight_difference
 
+    return distance
 
+#TODO: change to return indices instead of innovation? (and change using funcs accordingly)
 def calculate_mismatching_genes(innovation_to_connections1, innovation_to_connections2):
     """Returns a pair of lists containing innovation numbers of disjoint and excess connection genes"""
     if not innovation_to_connections1 or not innovation_to_connections2:

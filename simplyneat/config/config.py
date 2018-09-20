@@ -1,9 +1,13 @@
 import logging
-import multiprocessing
+
 from enum import Enum
+from functools import total_ordering
 
 import numpy as np
+import multiprocessing
 
+#TODO: config tf.logging
+@total_ordering
 class LoggingLevel(Enum):
     CRITICAL = 50
     ERROR = 40
@@ -11,12 +15,20 @@ class LoggingLevel(Enum):
     INFO = 20
     DEBUG = 10
 
+    def __lt__(self, other):
+        if self.__class__ is other.__class__:
+            return self.value < other.value
+        else:
+            return NotImplemented
+
+
 #TODO: don't allow lambdas
 class Config:
     # Dictionary of the config attributes and their default values
     # None means no default value, and should be set by the user, unless stated otherwise
     _attributes = {
         # have to be set by the user
+        #TODO: according to NEAT, fitness function must return only positive values
         'fitness_function': None,
         'number_of_input_nodes': None,
         'number_of_output_nodes': None,
@@ -25,18 +37,19 @@ class Config:
         'population_size': 1000,
         'elite_group_size': 50,                                         # number of members who always pass to next generation
 
-        'compatibility_threshold': 6,
-        'excess_coefficient': 2,            # TODO: find values and give meaningful documentation
-        'disjoint_coefficient': 2,
-        'weight_difference_coefficient': 1,
+        'compatibility_threshold': 6.0,
+        'excess_coefficient': 2.0,            # TODO: find values and give meaningful documentation
+        'disjoint_coefficient': 2.0,
+        'weight_difference_coefficient': 1.0,
         'change_weight_mutation_distribution': np.random.normal,               # weight to add in change_weight mutation               # TODO: check against paper
         'connection_weight_mutation_distribution': np.random.normal,    # weight to give in add_connection mutation
-        'add_connection_probability': 0.3,                              # probability of add_connection mutation occurring      # TODO: think of default value
-        'add_node_probability': 0.3,                                    # probability of add_node mutation occurring            # TODO: think of default value
-        'change_weight_probability': 0.8,                               # probability of change_weight mutation occurring       # TODO: think of default value
-        'reenable_connection_probability': 0.2,                         # probability of re-enable mutation occuring            # TODO: think of default value
-        'max_tournament_size': 50,
+        'add_connection_probability': 0.2,                              # probability of add_connection mutation occurring      # TODO: think of default value
+        'add_node_probability': 0.2,                                    # probability of add_node mutation occurring            # TODO: think of default value
+        'change_weight_probability': 0.1,                               # probability of change_weight mutation occurring       # TODO: think of default value
+        #TODO: change it to enable\disable mutation (meteg)
+        'reenable_connection_probability': 0.05,                         # probability of re-enable mutation occuring            # TODO: think of default value
         # probability of the chance that an inherited connection is disabled if it's disabled in either parent # TODO: think of a default value
+        #TODO: not actually implemented (the inherit attrib) - implement
         'inherit_disabled_connection_probability': 0.2,
         'processes_in_pool': multiprocessing.cpu_count(),
         'logging_level': LoggingLevel.INFO,
@@ -83,20 +96,6 @@ class Config:
             setattr(self, attribute_name, default_value)
         else:
             setattr(self, attribute_name, provided_value)
-    #TODO: REMOVE COMMENTS
-    # def _log_missing_parameters(self, params_dict):
-    #     assert isinstance(params_dict, dict)
-    #
-    #     missing_parameters = set(Config._attributes.keys()) - set(params_dict.keys())
-    #     logging.info("The following parameters were not provided by user (and hence set to default):")
-    #     self._log_parameters_value(missing_parameters)
-    #
-    # def _log_invalid_parameters(self, params_dict):
-    #     assert isinstance(params_dict, dict)
-    #
-    #     invalid_parameters = set(params_dict.keys()) - set(Config._attributes.keys())
-    #     logging.info("The following parameters given by users are invalid (no attribute by that name exists for Config):")
-    #     self._log_parameters_value(invalid_parameters)
 
     def _log_parameters_value(self):
         for parameter in Config._attributes.keys():

@@ -30,7 +30,7 @@ class Neat:
 
         logging.info("Running for %s generations" % str(number_of_generations))
         for i in range(number_of_generations):
-            logging.info("Generation number %s" % (i+1))
+            logging.info("Generation number %s" % i)
             self._step()
         return self._statistics
 

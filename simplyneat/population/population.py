@@ -1,10 +1,12 @@
 import logging
 import random
+import time
 from enum import Enum
+
+import numpy as np
 
 from simplyneat.genome.genome import compatibility_distance
 from simplyneat.species.species import Species
-import numpy as np
 
 
 class Population:
@@ -12,6 +14,7 @@ class Population:
     def __init__(self, config, genomes=None, species=None):
         """Builds the population according to a list of genomes and species. 
         Assign each organism to one of the given species."""
+        start_time = time.time()
         if species is None:
             self._list_of_species = []
         else:
@@ -34,6 +37,9 @@ class Population:
                 species.randomize_representative()          # set new representative after speciating
             else:
                 self._list_of_species.remove(species)       # species has no members and is therefore extinct
+        logging.debug("Population init took %s sec. #%s species of sizes: %s" %
+                      (time.time() - start_time, len(self._list_of_species),
+                       [species.size for species in self._list_of_species]))
 
     @property
     def species(self):
@@ -55,7 +61,6 @@ class Population:
 
     def _add_genome(self, genome):
         assert genome not in self._genomes
-        logging.debug("New genome added: " + str(genome))
         self._genomes.append(genome)
         self._assign_species(genome)
 
@@ -68,7 +73,6 @@ class Population:
             # try to assign genome to species with given index
             if compatibility_distance(genome, representative) < self._compatibility_threshold:
                 self._list_of_species[index].add_genome(genome)
-                logging.debug("Assigned genome to species: " + str(genome) + str(index))
                 return index
         # The genome doesn't belong to an existing species. This is a new species, with only genome as a member for now.
         self._list_of_species.append(Species([genome]))
@@ -76,8 +80,10 @@ class Population:
 
     def _speciate_population(self):
         """Assign a species for every genome in the current population"""
+        speciation_start_time = time.time()
         for genome in self._genomes:
             self._assign_species(genome)
+        logging.debug("Speciation took %s sec" % (time.time() - speciation_start_time))
 
     def get_statistic(self, statistic):
         """Returns a certain statistic which is kept by the population.
@@ -123,10 +129,8 @@ class Population:
         return min(self._genomes, key=lambda genome: genome.fitness)
 
     def __str__(self):
-        return '[Population with %s species and %s genomes: \nSpecies: %s\n]' \
+        return 'Population with %s species and %s genomes: \nSpecies: %s' \
                % (len(self.species), len(self._genomes), self.species)
-
-    __repr__ = __str__
 
 #TODO: refactor out to stats class
 class StatisticsTypes(Enum):

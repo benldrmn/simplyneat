@@ -1,18 +1,19 @@
-try:
-    #TODO: doesn't help, forget about it (only use mp.pool)
-    from pathos.pools import ProcessPool as Pool
-except ImportError:
-    # fall back on the multiprocessing pool implementation
-    from multiprocessing.pool import Pool
-
-import random
 import copy
 import functools
+import logging
+import random
+import time
+
+import numpy as np
 
 from simplyneat.breeder import mutations
 from simplyneat.genome.genes.connection_gene import ConnectionGene
 from simplyneat.genome.genome import calculate_mismatching_genes, Genome, compatibility_distance
 from simplyneat.population.population import Population
+
+#TODO: openai gym not thread sasfe (doesnt work)
+#from multiprocessing.dummy import Pool
+from multiprocessing import Pool
 
 
 class Breeder:
@@ -21,18 +22,17 @@ class Breeder:
         #TODO: re-add reset innovations each generation to config
         self._compatibility_threshold = config.compatibility_threshold
         self._population_size = config.population_size
-        self._max_tournament_size = config.max_tournament_size
         self._elite_group_size = config.elite_group_size
         self._processes_in_pool = config.processes_in_pool
         self._config = config
+
+        self._innovation_counter = 0
+        self._innovations_dictionary = {}
 
         if self._processes_in_pool > 1:
             self._pool = Pool(self._processes_in_pool)
         else:
             self._pool = None
-
-        self._innovation_counter = 0
-        self._innovations_dictionary = {}
 
     def breed_population(self, population):
         """Breeds and mutates population, returning the next generation"""
@@ -40,21 +40,27 @@ class Breeder:
         pairs_of_parents_to_breed = self._generate_parents_pairs_to_breed(population)
         # the functools.partial is a workaround to pass the config since pool.map doesn't accept lambda functions
         #TODO: if config holds a lambda function (i.e. fitness) it fails. don't allow lambdas in config
-        if self._pool is None:
-            offsprings_structural_innovations_pairs = list(map(functools.partial(_produce_offspring, config=self._config),
-                                                         pairs_of_parents_to_breed))
-        else:
+        #TODO: refactor to function with logging and everything
+        breeding_start_time = time.time()
+        if self._pool:
             offsprings_structural_innovations_pairs = self._pool.map(functools.partial(_produce_offspring, config=self._config),
                                                                     pairs_of_parents_to_breed)
+        else:
+            offsprings_structural_innovations_pairs = list(map(functools.partial(_produce_offspring, config=self._config),
+                                                         pairs_of_parents_to_breed))
+
+        logging.debug("Breeding pairs of parents took %s sec", (time.time() - breeding_start_time))
 
         new_structural_innovations = []
         new_offsprings = []
-        for offspring_and_innovations_pair in offsprings_structural_innovations_pairs:
-            new_offsprings.append(offspring_and_innovations_pair[0])
-            new_structural_innovations += offspring_and_innovations_pair[1]
+        for offspring_and_structural_innovations_pair in offsprings_structural_innovations_pairs:
+            new_offsprings.append(offspring_and_structural_innovations_pair[0])
+            new_structural_innovations += offspring_and_structural_innovations_pair[1]
         # assign the proper innovation numbers to the structural changes (for example, new connection) from the last
         # breeding session.
         self._assign_innovations(new_structural_innovations)
+        logging.debug("Breeder's innovations dictionary: " + str(self._innovations_dictionary))
+        logging.debug("Breeder's innovations counter: " + str(self._innovation_counter))
 
         # add the new offsprings (with the correct innovation number for all of the genes)
         # to the new population's genomes
@@ -68,6 +74,9 @@ class Breeder:
         return Population(self._config, genomes=new_population_genomes, species=population.species)
 
     def _generate_parents_pairs_to_breed(self, population):
+        #TODO: why wait? when pair is ready, breed async (or not? map is better because chinks?)
+        pairs_calc_start_time = time.time()
+
         species_list = population.species
         new_species_distribution = self._calculate_offspring_per_species(species_list, population)
         pairs_of_parents_to_breed = []
@@ -75,34 +84,44 @@ class Breeder:
         for species_index in range(len(species_list)):
             # repeat once for each genomes in the new species' distribution
             for _ in range(new_species_distribution[species_index]):
-                # choose parents in a k-tournament manner - sample k genomes randomly and take the best out of those k
                 genomes = species_list[species_index].genomes
                 assert len(genomes) > 0
-                k = min(self._max_tournament_size, len(genomes))
-                genome1 = max(random.sample(genomes, k), key=lambda genome: genome.fitness)
-                genome2 = max(random.sample(genomes, k), key=lambda genome: genome.fitness)
+                #TODO: give a small chance for 0-fitness genomes?
+                fitness_list = [genome.fitness for genome in genomes]
+                sum_of_fitness = sum(fitness_list)
+                #TODO: assuming fitness function >=0
+                if sum_of_fitness == 0:
+                    #uniform distribution
+                    probabilities = None
+                else:
+                    probabilities = [genome.fitness/sum_of_fitness for genome in genomes]
+
+                genome1 = np.random.choice(genomes, p=probabilities)
+                genome2 = np.random.choice(genomes, p=probabilities)
+
                 pairs_of_parents_to_breed.append((genome1, genome2))
+
+        logging.debug("Pairs to breed (#%s) calculation took %s sec" % (len(pairs_of_parents_to_breed),
+                                                                        (time.time() - pairs_calc_start_time)))
         return pairs_of_parents_to_breed
 
-    def _calculate_adjusted_fitness(self, genome, population):
-        """Calculates the adjusted fitness of a single genome"""
-        # at least 1 since the sharing of an genome with itself is 1
-        sum_of_sharing = sum([self._sharing_function(compatibility_distance(genome, other_genome))
-                              for other_genome in population.genomes])
-        return genome.fitness / sum_of_sharing
-
-    def _sharing_function(self, distance):
-        if distance >= self._compatibility_threshold:
-            return 0
+    def _calculate_adjusted_fitness_of_species_list(self, list_of_species, population):
+        start_time = time.time()
+        if self._pool:
+            result = list(self._pool.map(
+                functools.partial(_sum_of_adjusted_fitness_in_species, population=population,
+                                  compatibility_threshold=self._compatibility_threshold), list_of_species))
         else:
-            return 1
+            result = list(map(
+                functools.partial(_sum_of_adjusted_fitness_in_species, population=population,
+                                  compatibility_threshold=self._compatibility_threshold), list_of_species))
+        logging.debug("Adjusted fitness calculations took %s sec. Results: %s" % (time.time() - start_time, result))
+        return result
 
     def _calculate_offspring_per_species(self, list_of_species, population):
         """returns a list, entry [i] is the number of offsprings for species i in the following generation"""
-        species_total_adjusted_fitness = [0] * len(list_of_species)
-        for species_index in range(len(list_of_species)):
-            for genome in list_of_species[species_index].genomes:
-                species_total_adjusted_fitness[species_index] += self._calculate_adjusted_fitness(genome, population)
+
+        species_total_adjusted_fitness = self._calculate_adjusted_fitness_of_species_list(list_of_species, population)
 
         # species_adjusted_fitness[i] is the adjusted fitness of species i
         population_total_adjusted_fitness = sum(species_total_adjusted_fitness)  # entire population's adjusted fitness
@@ -122,6 +141,7 @@ class Breeder:
 
     def _assign_innovations(self, genes):
         # we only assign innovation numbers to connection genes
+        assignment_start_time = time.time()
         connection_genes = [gene for gene in genes if isinstance(gene, ConnectionGene)]
         for gene in connection_genes:
             if gene.index in self._innovations_dictionary:
@@ -130,6 +150,7 @@ class Breeder:
                 gene.innovation = self._innovation_counter
                 self._innovations_dictionary[gene.index] = gene.innovation
                 self._innovation_counter += 1
+        logging.debug("Innovation numbers assignment to offsprings took %s" % (time.time() - assignment_start_time))
 
 
 def _produce_offspring(parents_pair, config):
@@ -137,7 +158,7 @@ def _produce_offspring(parents_pair, config):
     structural_innovations = _mutate_offspring(offspring, config)
     return offspring, structural_innovations
 
-
+#TODO: refactor - error prone (using innvation as keys, than index, that's confusing)
 def _breed_parents(parent_genome1, parent_genome2, config):
     """Returns a genome containing the crossover of connection-genes from both genomes"""
     # Matching genes are inherited randomly, excess and disjoint genes are inherited from the better parent
@@ -155,6 +176,7 @@ def _breed_parents(parent_genome1, parent_genome2, config):
     mismatching = disjoint + excess
     matching = set(innovation_to_connections1.keys()).intersection(set(innovation_to_connections2.keys()))
     #TODO: deep copy nodes and connections for the new genome instead of doing this
+    #TODO: disable in probability p if disabled in one parent
     offspring_connection_genes = {}
     # matching genes - inherit one from a random parent
     for innovation_number in matching:
@@ -173,6 +195,7 @@ def _breed_parents(parent_genome1, parent_genome2, config):
         if innovation_number in innovation_to_connections1.keys():
             offspring_connection_genes[innovation_number] = copy.copy(innovation_to_connections1[innovation_number])
 
+    offspring_connection_genes = {connection.index: connection for connection in offspring_connection_genes.values()}
     new_genome = Genome(config, connection_genes=offspring_connection_genes)
     return new_genome
 
@@ -181,6 +204,7 @@ def _mutate_offspring(offspring, config):
     """returns a list of the new structural changes' genes added to the offspring so the breeder can assign them
     the appropriate innovation number"""
     structural_mutations_genes = []
+    # random.random() returns a random float in the range [0.0, 1.0)
     if random.random() < config.add_connection_probability:
         structural_mutations_genes += mutations.mutate_add_connection(genome=offspring,
                                                                       connection_weight_mutation_distribution=
@@ -195,3 +219,27 @@ def _mutate_offspring(offspring, config):
         mutations.mutate_reenable_connection(genome=offspring)
 
     return structural_mutations_genes
+
+
+def _calculate_adjusted_fitness_of_genome(genome, population, compatibility_threshold):
+    """Calculates the adjusted fitness of a single genome"""
+    sum_of_sharing = sum([_sharing_function(compatibility_distance(genome, other_genome), compatibility_threshold)
+                          for other_genome in population.genomes])
+    # sum_of_sharing is at least 1 since the sharing of an genome with itself is 1
+    return genome.fitness / sum_of_sharing
+
+
+def _sharing_function(distance, compatibility_threshold):
+    if distance >= compatibility_threshold:
+        return 0
+    else:
+        return 1
+
+
+#TODO: fitnesses typo
+def _sum_of_adjusted_fitness_in_species(species, population, compatibility_threshold):
+    species_total_adjusted_fitness = 0
+    for genome in species.genomes:
+        species_total_adjusted_fitness += _calculate_adjusted_fitness_of_genome(genome, population, compatibility_threshold)
+    return species_total_adjusted_fitness
+

@@ -34,7 +34,6 @@ class ConnectionGene:
 
     @innovation.setter
     def innovation(self, innovation):
-
         self._innovation = innovation
 
     @property
@@ -70,14 +69,14 @@ class ConnectionGene:
         return prev_flag != new_flag
 
     def __str__(self):
-        return "[%s,%s,%s,%s,%s]" \
+        return "Connection Gene: %s,%s,%s,%s,%s" \
                % (self._index, self._weight, self._split_number, self._enabled, str(self._innovation))
 
     def __key(self):
         return self._source_node, self._dest_node, self._weight, self._split_number, self._enabled, self._innovation
 
     def __eq__(self, y):
-        return self.__key() == y.__key()
+        return isinstance(y, self.__class__) and self.__key() == y.__key()
 
-    def __hash__(self):
-        return hash(self.__key())
+    # def __hash__(self):
+    #     return hash(self.__key())

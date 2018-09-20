@@ -13,6 +13,10 @@ class Species:
         self._representative = random.choice(self._genomes)
 
     @property
+    def size(self):
+        return len(self._genomes)
+
+    @property
     def genomes(self):
         return self._genomes
 
@@ -35,8 +39,5 @@ class Species:
         self._genomes = []
 
     def __str__(self):
-        return '\n[Representative number: %s. List of genomes: %s]' % \
+        return 'Species representative number: %s. List of genomes: %s' % \
                (len(self._genomes), self._genomes)
-
-    __repr__ = __str__
-
