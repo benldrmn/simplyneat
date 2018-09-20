@@ -5,9 +5,9 @@ An easily-configurable optimized implementation of the genetic algorithm NEAT.
 ## Getting Started
 ### Prerequisites
 
-Mandatory: Theano, scipy
+Mandatory: TensorFlow, NumPy
 ```
-pip install Theano
+pip install TensorFlow
 apt-get install python-numpy python-scipy python-dev python-pip python-nose g++ libopenblas-dev git
 ```
 Optional: gym
@@ -47,14 +47,12 @@ print("Average fitness throught iterations: %s" % str(statistics[AVERAGE_FITNESS
 
 ## Built With
 
-* [Theano] (http://deeplearning.net/software/theano/)
+* [TensorFlow] (https://www.tensorflow.org/)
+* [NumPy] (http://www.numpy.org/)
 * [OpenAI gym](https://gym.openai.com/)
 
 ## Authors
 
 * **Ben Liderman** (https://github.com/benldrmn)
 * **Liron Bronfman** (https://github.com/lironbro)
-
-
-See also the list of [contributors](https://github.com/your/project/contributors) who participated in this project.
 
