@@ -37,7 +37,7 @@ class Config:
         'population_size': 1000,
         'elite_group_size': 50,                                         # number of members who always pass to next generation
 
-        'compatibility_threshold': 6.0,
+        'compatibility_threshold': 5.0,
         'excess_coefficient': 2.0,            # TODO: find values and give meaningful documentation
         'disjoint_coefficient': 2.0,
         'weight_difference_coefficient': 1.0,
@@ -45,9 +45,9 @@ class Config:
         'connection_weight_mutation_distribution': np.random.normal,    # weight to give in add_connection mutation
         'add_connection_probability': 0.2,                              # probability of add_connection mutation occurring      # TODO: think of default value
         'add_node_probability': 0.2,                                    # probability of add_node mutation occurring            # TODO: think of default value
-        'change_weight_probability': 0.1,                               # probability of change_weight mutation occurring       # TODO: think of default value
+        'change_weight_probability': 0.2,                               # probability of change_weight mutation occurring       # TODO: think of default value
         #TODO: change it to enable\disable mutation (meteg)
-        'reenable_connection_probability': 0.05,                         # probability of re-enable mutation occuring            # TODO: think of default value
+        'toggle_connection_enable_probability': 0.05,                         # probability of re-enable mutation occuring            # TODO: think of default value
         # probability of the chance that an inherited connection is disabled if it's disabled in either parent # TODO: think of a default value
         #TODO: not actually implemented (the inherit attrib) - implement
         'inherit_disabled_connection_probability': 0.2,
@@ -66,27 +66,9 @@ class Config:
         for attribute_name in Config._attributes.keys():
             self._set(attribute_name, params_dict.get(attribute_name), Config._attributes.get(attribute_name))
 
-        self._init_logger()
+        init_logger(self.logging_level)
 
-        logging.info("NEAT Parameters:")
         self._log_parameters_value()
-        # if params_dict:
-        #     self._log_missing_parameters(params_dict)
-        #     self._log_invalid_parameters(params_dict)
-
-    def _init_logger(self):
-        if self.logging_level == LoggingLevel.DEBUG:
-            logging.getLogger().setLevel(logging.DEBUG)
-        elif self.logging_level == LoggingLevel.INFO:
-            logging.getLogger().setLevel(logging.INFO)
-        elif self.logging_level == LoggingLevel.WARNING:
-            logging.getLogger().setLevel(logging.WARNING)
-        elif self.logging_level == LoggingLevel.ERROR:
-            logging.getLogger().setLevel(logging.ERROR)
-        elif self.logging_level == LoggingLevel.CRITICAL:
-            logging.getLogger().setLevel(logging.CRITICAL)
-        else:
-            raise ValueError("Invalid LoggingLevel")
 
     def _set(self, attribute_name, provided_value, default_value):
         assert attribute_name in Config._attributes
@@ -98,5 +80,21 @@ class Config:
             setattr(self, attribute_name, provided_value)
 
     def _log_parameters_value(self):
+        logging.info("NEAT Parameters:")
         for parameter in Config._attributes.keys():
             logging.info(str(parameter) + ": " + str(getattr(self, parameter)))
+
+
+def init_logger(logging_level):
+    if logging_level == LoggingLevel.DEBUG:
+        logging.getLogger().setLevel(logging.DEBUG)
+    elif logging_level == LoggingLevel.INFO:
+        logging.getLogger().setLevel(logging.INFO)
+    elif logging_level == LoggingLevel.WARNING:
+        logging.getLogger().setLevel(logging.WARNING)
+    elif logging_level == LoggingLevel.ERROR:
+        logging.getLogger().setLevel(logging.ERROR)
+    elif logging_level == LoggingLevel.CRITICAL:
+        logging.getLogger().setLevel(logging.CRITICAL)
+    else:
+        raise ValueError("Invalid LoggingLevel")

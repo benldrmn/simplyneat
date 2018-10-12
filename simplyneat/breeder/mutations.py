@@ -11,16 +11,17 @@ Returns a list of the changed gene(s) of the given genome.
 """
 
 #TODO: have it flip the state instead only enable
-def mutate_reenable_connection(genome):
+def mutate_toggle_connection_enable(genome):
     connection_genes = list(genome.connection_genes.values())
-    disabled_connection_genes = [connection_gene for connection_gene in connection_genes
-                                 if not connection_gene.is_enabled()]
-    if not disabled_connection_genes:
-        logging.debug("reenable_connection mutation failed: no connection genes to reenable")
+    if not connection_genes:
+        logging.debug("toggle connection enable mutation failed: no connection genes to toggle")
         return []
-    connection_to_enable = random.choice(disabled_connection_genes)
-    connection_to_enable.enable()
-    return [connection_to_enable]
+    connection_to_toggle = random.choice(connection_genes)
+    if connection_to_toggle.is_enabled():
+        connection_to_toggle.disable()
+    else:  # connection disabled
+        connection_to_toggle.enable()
+    return [connection_to_toggle]
 
 
 def mutate_add_connection(genome, connection_weight_mutation_distribution):

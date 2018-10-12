@@ -1,6 +1,5 @@
 from enum import Enum
 
-
 class NodeGene:
 
     def __init__(self, node_type, node_index):

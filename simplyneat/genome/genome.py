@@ -6,6 +6,7 @@ import time
 import numpy as np
 
 from simplyneat.agent.agent import Agent
+from simplyneat.config.config import init_logger
 from simplyneat.genome.genes.connection_gene import ConnectionGene
 from simplyneat.genome.genes.node_gene import NodeGene, NodeType
 
@@ -24,6 +25,8 @@ class Genome:
             config.excess_coefficient, config.disjoint_coefficient, config.weight_difference_coefficient
 
         self._config = config
+        #TODO: hacky
+        init_logger(self._config.logging_level)
 
         #todo: create a helper logger init func for all loggers
 
@@ -45,12 +48,12 @@ class Genome:
 
         self._init_node_genes()
 
-        #TODO: can't save in self agent cause tensorflow is not pickleable
+        #TODO: can't save in self agent cause tensorflow is not pickleable (doesn't matter -not pickleable becuas config)
         #self._agent = Agent(self._config, self)
 
         fitness_init_time = time.time()
         self._fitness = config.fitness_function(Agent(self._config, self))
-        #We only allow non-negative fitness functions
+        # We only allow non-negative fitness functions
         assert self._fitness >= 0
         logging.debug("Fitness calculation (%s) took %s sec" % (str(self._fitness), str(time.time() - fitness_init_time)))
 
@@ -165,9 +168,8 @@ def compatibility_distance(genome1, genome2):
     """Returns the compatibility distance, a measure of how closely related two genomes are"""
     #TODO: diverging from paper? only count connection genes
     if len(genome1.connection_genes) == 0 and len(genome2.connection_genes) == 0:
-        # logging.debug("genome1: %s AND genome2: %s both have 0 connection genes and hence have compatibility distance of 0"
-        #               % (str(genome1), str(genome2)))
         return 0.0
+
     # create a new dict with all of the genomes' genes with innovation as key for easy processing later on
     innovation_to_connections1 = {connection.innovation: connection for connection in genome1.connection_genes.values()}
     innovation_to_connections2 = {connection.innovation: connection for connection in genome2.connection_genes.values()}
@@ -187,7 +189,14 @@ def compatibility_distance(genome1, genome2):
     # TODO: maybe find prettier solution for coefficients
     distance = genome1.excess_coefficient*len(excess)/N + genome1.disjoint_coefficient*len(disjoint)/N +\
            genome1.weight_difference_coefficient*average_weight_difference
-
+    #TODO: remove below
+    if random.random() < 0.00001:
+        a = [conn.index for conn in genome1.connection_genes.values()]
+        b = [conn.index for conn in genome2.connection_genes.values()]
+        print("%s * %s / %s   +   %s * %s / %s    +   %s * %s = %s.\n conn1: %s\n conn2: %s\n intersection: %s\n diff: %s \n\n" %
+              (genome1.excess_coefficient, len(excess), N, genome1.disjoint_coefficient, len(disjoint), N,
+               genome1.weight_difference_coefficient, average_weight_difference, distance,
+               a, b, set(a).intersection(set(b)), set(a).symmetric_difference(set(b))))
     return distance
 
 #TODO: change to return indices instead of innovation? (and change using funcs accordingly)

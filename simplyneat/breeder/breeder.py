@@ -91,7 +91,7 @@ class Breeder:
                 sum_of_fitness = sum(fitness_list)
                 #TODO: assuming fitness function >=0
                 if sum_of_fitness == 0:
-                    #uniform distribution
+                    # uniform distribution
                     probabilities = None
                 else:
                     probabilities = [genome.fitness/sum_of_fitness for genome in genomes]
@@ -105,23 +105,33 @@ class Breeder:
                                                                         (time.time() - pairs_calc_start_time)))
         return pairs_of_parents_to_breed
 
-    def _calculate_adjusted_fitness_of_species_list(self, list_of_species, population):
+    def _calculate_adjusted_fitness_of_list_of_species(self, list_of_species, population):
         start_time = time.time()
+        genomes = population.genomes
         if self._pool:
-            result = list(self._pool.map(
-                functools.partial(_sum_of_adjusted_fitness_in_species, population=population,
-                                  compatibility_threshold=self._compatibility_threshold), list_of_species))
+            # parallel evaluation
+            adjusted_fitness = list(self._pool.map(
+                functools.partial(_calculate_adjusted_fitness_of_genome, population=population,
+                                  compatibility_threshold=self._compatibility_threshold), genomes))
         else:
-            result = list(map(
-                functools.partial(_sum_of_adjusted_fitness_in_species, population=population,
-                                  compatibility_threshold=self._compatibility_threshold), list_of_species))
-        logging.debug("Adjusted fitness calculations took %s sec. Results: %s" % (time.time() - start_time, result))
-        return result
+            # sequential evaluation
+            adjusted_fitness = list(map(
+                functools.partial(_calculate_adjusted_fitness_of_genome, population=population,
+                                  compatibility_threshold=self._compatibility_threshold), genomes))
+
+        adjusted_fitness_of_species = [0] * len(list_of_species)
+        for genome_index in range(len(genomes)):
+            for species_index in range(len(list_of_species)):
+                if genomes[genome_index] in list_of_species[species_index].genomes:
+                    adjusted_fitness_of_species[species_index] += adjusted_fitness[genome_index]
+
+        logging.debug("Adjusted fitness of all species' genomes calculation took %s sec" % (time.time() - start_time))
+        return adjusted_fitness_of_species
 
     def _calculate_offspring_per_species(self, list_of_species, population):
         """returns a list, entry [i] is the number of offsprings for species i in the following generation"""
 
-        species_total_adjusted_fitness = self._calculate_adjusted_fitness_of_species_list(list_of_species, population)
+        species_total_adjusted_fitness = self._calculate_adjusted_fitness_of_list_of_species(list_of_species, population)
 
         # species_adjusted_fitness[i] is the adjusted fitness of species i
         population_total_adjusted_fitness = sum(species_total_adjusted_fitness)  # entire population's adjusted fitness
@@ -215,8 +225,8 @@ def _mutate_offspring(offspring, config):
         mutations.mutate_connection_weight(genome=offspring,
                                            weight_mutation_distribution=
                                            config.change_weight_mutation_distribution)
-    if random.random() < config.reenable_connection_probability:
-        mutations.mutate_reenable_connection(genome=offspring)
+    if random.random() < config.toggle_connection_enable_probability:
+        mutations.mutate_toggle_connection_enable(genome=offspring)
 
     return structural_mutations_genes
 
