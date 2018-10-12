@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project version="4">
+  <component name="WebServers">
+    <option name="servers">
+      <webServer id="57a3cd2c-f7de-406e-8a4f-699e271ecb37" name="turandot" url="http://localhost">
+        <fileTransfer host="localhost" port="6002" accessType="SFTP">
+          <advancedOptions>
+            <advancedOptions dataProtectionLevel="Private" />
+          </advancedOptions>
+          <option name="port" value="6002" />
+        </fileTransfer>
+      </webServer>
+    </option>
+  </component>
+</project>

@@ -1,3 +1,6 @@
+import sys
+sys.path.append('../')
+
 from simplyneat.config.config import Config
 from simplyneat.genome.genes.connection_gene import ConnectionGene
 from simplyneat.genome.genes.node_gene import NodeType, NodeGene
@@ -5,7 +8,6 @@ from simplyneat.genome.genome import Genome
 from simplyneat.agent.neuralnet import TheanoAgent
 import gym
 from simplyneat.neat import Neat
-
 
 def fitness(agent):
     done = False
