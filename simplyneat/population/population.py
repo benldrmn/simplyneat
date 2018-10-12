@@ -28,7 +28,6 @@ class Population:
         self._elite_group_size = config.elite_group_size                    # members of population who always pass on
         self._config = config
 
-        # generation number
         # divide the genomes into species
         self._speciate_population()
         # set new representatives or eliminate extinct species according to new generation genomes
@@ -98,11 +97,6 @@ class Population:
             return self.average_fitness
         if statistic == StatisticsTypes.NUM_SPECIES:
             return self.number_of_species
-        if statistic == StatisticsTypes.BEST_GENOME:
-            return self.best_genome
-        if statistic == StatisticsTypes.WORST_GENOME:
-            return self.worst_genome
-        raise ValueError("Statistic type unhandled in population")
 
     @property
     def max_fitness(self):
@@ -124,10 +118,6 @@ class Population:
     def best_genome(self):
         return max(self._genomes, key=lambda genome: genome.fitness)
 
-    @property
-    def worst_genome(self):
-        return min(self._genomes, key=lambda genome: genome.fitness)
-
     def __str__(self):
         return 'Population with %s species and %s genomes: \nSpecies: %s' \
                % (len(self.species), len(self._genomes), self.species)
@@ -138,5 +128,3 @@ class StatisticsTypes(Enum):
     MIN_FITNESS = 'MIN_FITNESS'
     AVERAGE_FITNESS = 'AVERAGE_FITNESS'
     NUM_SPECIES = 'NUM_SPECIES'
-    BEST_GENOME = 'BEST_GENOME'
-    WORST_GENOME = 'WORST_GENOME'
