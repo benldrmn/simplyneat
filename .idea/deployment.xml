@@ -5,7 +5,7 @@
       <paths name="turandot">
         <serverdata>
           <mappings>
-            <mapping deploy="/home/chaimb/liron/simplyneat/simplyneat" local="$PROJECT_DIR$/simplyneat" web="/" />
+            <mapping deploy="/home/chaimb/liron/simplyneat/" local="$PROJECT_DIR$/" web="/" />
           </mappings>
         </serverdata>
       </paths>

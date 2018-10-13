@@ -14,8 +14,8 @@ from simplyneat.neat import Neat
 from simplyneat.population.population import StatisticsTypes
 
 
-
 def fitness(agent):
+
     done = False
     env = gym.make('SpaceInvaders-ram-v0')
     total_reward = 0
@@ -29,6 +29,7 @@ def fitness(agent):
 
         env.close()
         return total_reward
+
 
 if __name__ == '__main__':
     """Testing Neat on space invaders"""
