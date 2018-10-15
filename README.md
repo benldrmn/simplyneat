@@ -40,7 +40,7 @@ neat = Neat(config)
 
 ```
 num_of_iterations = 20
-statistics = neat.run(num_of_iterations)
+statistics, best_genome = neat.run(num_of_iterations)
 
 print("Average fitness throught iterations: %s" % str(statistics[AVERAGE_FITNESS])
 ```
